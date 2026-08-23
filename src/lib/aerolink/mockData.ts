@@ -3,63 +3,37 @@ import type { Node, SOSMessage } from "./types";
 const now = Date.now();
 const iso = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString();
 
-/** 5 relay nodes dropped in a rough cluster over a flood-hit valley. */
+/** 3 field-tested relay nodes dropped over a flood-hit valley. */
 export const mockNodes: Node[] = [
   {
-    id: "N1",
+    id: "NODE_A",
     lat: 30.0812,
     lng: 78.2673,
     status: "online",
     batteryPercent: 87,
     lastSeen: iso(0.2),
-    connectedTo: ["N2", "N3"],
+    connectedTo: ["NODE_B"],
   },
   {
-    id: "N2",
+    id: "NODE_B",
     lat: 30.0894,
     lng: 78.2801,
     status: "online",
     batteryPercent: 72,
     lastSeen: iso(0.4),
-    connectedTo: ["N1", "N4"],
+    connectedTo: ["NODE_A", "NODE_C"],
   },
   {
-    id: "N3",
+    id: "NODE_C",
     lat: 30.0731,
     lng: 78.2818,
     status: "degraded",
     batteryPercent: 34,
     lastSeen: iso(3.5),
-    connectedTo: ["N1"],
-  },
-  {
-    id: "N4",
-    lat: 30.0968,
-    lng: 78.2935,
-    status: "online",
-    batteryPercent: 61,
-    lastSeen: iso(0.6),
-    connectedTo: ["N2", "N5"],
-  },
-  {
-    id: "N5",
-    lat: 30.0855,
-    lng: 78.3062,
-    status: "degraded",
-    batteryPercent: 18,
-    lastSeen: iso(6.2),
-    connectedTo: ["N4"],
-  },
-  {
-    id: "N6",
-    lat: 30.0702,
-    lng: 78.2962,
-    status: "offline",
-    batteryPercent: 4,
-    lastSeen: iso(27),
-    connectedTo: [],
+    connectedTo: ["NODE_B"],
   },
 ];
+
 
 export const mockSOSMessages: SOSMessage[] = [
   {
