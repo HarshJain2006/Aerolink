@@ -14,3 +14,8 @@ export function clockTime(iso: string): string {
 export function coords(lat: number, lng: number): string {
   return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 }
+
+/** Format optional coordinates, showing a placeholder when triangulation is pending. */
+export function coordsMaybe(c?: { lat: number; lng: number }): string {
+  return c ? coords(c.lat, c.lng) : "triangulating…";
+}

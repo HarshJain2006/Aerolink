@@ -13,6 +13,7 @@ export interface SOSMessage {
   nodeId: string;
   timestamp: string;
   message: string;
-  coordinates: { lat: number; lng: number };
+  /** May be undefined while the mesh is still triangulating the sender. */
+  coordinates?: { lat: number; lng: number };
   triageStatus: "critical" | "injured" | "stable" | "unknown";
 }
