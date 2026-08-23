@@ -6,7 +6,11 @@ import type { Node, SOSMessage } from "./types";
 
 const STATUSES: Node["status"][] = ["online", "degraded", "offline"];
 
-/** Mesh links: a peer link is drawn when either node lists the other. */
+/**
+ * Single source of truth for mesh edges: one edge per unique pair of nodes that
+ * BOTH list each other in `connectedTo`. The status bar counter and the map both
+ * consume this, so the displayed count can never diverge from the drawn lines.
+ */
 export function meshLinks(nodes: Node[]): { a: Node; b: Node }[] {
   const byId = new Map(nodes.map((n) => [n.id, n]));
   const seen = new Set<string>();
@@ -15,6 +19,7 @@ export function meshLinks(nodes: Node[]): { a: Node; b: Node }[] {
     for (const peerId of node.connectedTo) {
       const peer = byId.get(peerId);
       if (!peer) continue;
+      if (!peer.connectedTo.includes(node.id)) continue; // not a mutual link
       const key = [node.id, peer.id].sort().join("-");
       if (seen.has(key)) continue;
       seen.add(key);
@@ -23,6 +28,35 @@ export function meshLinks(nodes: Node[]): { a: Node; b: Node }[] {
   }
   return links;
 }
+
+/** Make adjacency reciprocal so a peer link is never half-declared. */
+function symmetrize(nodes: Node[]): Node[] {
+  const wanted = new Map(nodes.map((n) => [n.id, new Set(n.connectedTo)]));
+  for (const node of nodes) {
+    if (node.status === "offline") {
+      wanted.get(node.id)!.clear();
+      continue;
+    }
+    for (const peerId of node.connectedTo) {
+      const peer = nodes.find((p) => p.id === peerId);
+      if (!peer || peer.status === "offline") {
+        wanted.get(node.id)!.delete(peerId);
+        continue;
+      }
+      wanted.get(peerId)!.add(node.id);
+    }
+  }
+  // Drop links pointing at offline nodes that were added reciprocally.
+  for (const node of nodes) {
+    if (node.status === "offline") wanted.get(node.id)!.clear();
+    else
+      for (const peerId of [...wanted.get(node.id)!])
+        if (nodes.find((p) => p.id === peerId)?.status === "offline")
+          wanted.get(node.id)!.delete(peerId);
+  }
+  return nodes.map((n) => ({ ...n, connectedTo: [...wanted.get(n.id)!] }));
+}
+
 
 /** Simulate one tick of live telemetry: battery drain, status flips, new SOS. */
 function simulateTick(nodes: Node[]): Node[] {
