@@ -247,12 +247,13 @@ export function generateMockSOS(nodes: Node[], recent: SOSMessage[] = []): SOSMe
         };
   }
 
-  return {
+  const base = {
     id: `SOS-${sosCounter++}`,
     nodeId: node.id,
     timestamp: new Date().toISOString(),
     message: template.message,
-    coordinates,
     triageStatus: template.triageStatus,
   };
+
+  return coordinates === undefined ? base : { ...base, coordinates };
 }
