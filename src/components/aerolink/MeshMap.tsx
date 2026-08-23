@@ -1,15 +1,22 @@
+import { useEffect, useRef, useState } from "react";
 import { coords } from "@/lib/aerolink/format";
 import type { Node, SOSMessage } from "@/lib/aerolink/types";
 
-const PAD = 60;
-const W = 1000;
-const H = 620;
+/** Largest decoration drawn around a node centre (critical pulse ring). */
+const NODE_RADIUS = 34;
+/** Space the two-line label needs to the right of a node centre. */
+const LABEL_WIDTH = 210;
+/** Extra breathing room around the fitted bounding box (~18% each side). */
+const FIT_MARGIN = 0.18;
 
 const statusVar: Record<Node["status"], string> = {
   online: "var(--color-online)",
   degraded: "var(--color-degraded)",
   offline: "var(--color-offline)",
 };
+
+const clamp = (v: number, lo: number, hi: number) =>
+  hi < lo ? (lo + hi) / 2 : Math.min(Math.max(v, lo), hi);
 
 export function MeshMap({
   nodes,
@@ -24,21 +31,63 @@ export function MeshMap({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const [size, setSize] = useState({ w: 1000, h: 620 });
+
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      const r = entry?.contentRect;
+      if (r && r.width > 0 && r.height > 0)
+        setSize({ w: Math.round(r.width), h: Math.round(r.height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const { w: W, h: H } = size;
+
+  // Safe padded bounds: every node centre lives inside this box, so its circle
+  // and label always render fully inside the panel.
+  const padLeft = Math.min(NODE_RADIUS + 8, W * 0.2);
+  const padRight = Math.min(LABEL_WIDTH, W * 0.42);
+  const padY = Math.min(NODE_RADIUS + 10, H * 0.2);
+  const innerW = Math.max(W - padLeft - padRight, 1);
+  const innerH = Math.max(H - padY * 2, 1);
+
+  // Auto-fit: bounding box of current node positions, expanded by FIT_MARGIN,
+  // mapped onto the safe box. Recomputes whenever positions change.
   const lats = nodes.map((n) => n.lat);
   const lngs = nodes.map((n) => n.lng);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
+  const minLat = nodes.length ? Math.min(...lats) : 0;
+  const maxLat = nodes.length ? Math.max(...lats) : 0;
+  const minLng = nodes.length ? Math.min(...lngs) : 0;
+  const maxLng = nodes.length ? Math.max(...lngs) : 0;
+  const latSpan = maxLat - minLat || 0.01;
+  const lngSpan = maxLng - minLng || 0.01;
+  const lat0 = minLat - latSpan * FIT_MARGIN;
+  const lat1 = maxLat + latSpan * FIT_MARGIN;
+  const lng0 = minLng - lngSpan * FIT_MARGIN;
+  const lng1 = maxLng + lngSpan * FIT_MARGIN;
 
   const x = (lng: number) =>
-    PAD + ((lng - minLng) / (maxLng - minLng || 1)) * (W - PAD * 2);
+    clamp(
+      padLeft + ((lng - lng0) / (lng1 - lng0)) * innerW,
+      padLeft,
+      padLeft + innerW,
+    );
   const y = (lat: number) =>
-    H - PAD - ((lat - minLat) / (maxLat - minLat || 1)) * (H - PAD * 2);
+    clamp(
+      H - padY - ((lat - lat0) / (lat1 - lat0)) * innerH,
+      padY,
+      padY + innerH,
+    );
 
   const criticalNodes = new Set(
     messages.filter((m) => m.triageStatus === "critical").map((m) => m.nodeId),
   );
+
 
   return (
     <section className="panel relative flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -59,11 +108,11 @@ export function MeshMap({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div ref={hostRef} className="relative min-h-[340px] flex-1">
         <div className="grid-backdrop absolute inset-0" />
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
           className="absolute inset-0 h-full w-full"
         >
           {links.map(({ a, b }) => {
