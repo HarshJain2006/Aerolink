@@ -3,68 +3,42 @@ import type { Node, SOSMessage } from "./types";
 const now = Date.now();
 const iso = (minutesAgo: number) => new Date(now - minutesAgo * 60_000).toISOString();
 
-/** 5 relay nodes dropped in a rough cluster over a flood-hit valley. */
+/** 3 field-tested relay nodes dropped over a flood-hit valley. */
 export const mockNodes: Node[] = [
   {
-    id: "N1",
+    id: "NODE_A",
     lat: 30.0812,
     lng: 78.2673,
     status: "online",
     batteryPercent: 87,
     lastSeen: iso(0.2),
-    connectedTo: ["N2", "N3"],
+    connectedTo: ["NODE_B"],
   },
   {
-    id: "N2",
+    id: "NODE_B",
     lat: 30.0894,
     lng: 78.2801,
     status: "online",
     batteryPercent: 72,
     lastSeen: iso(0.4),
-    connectedTo: ["N1", "N4"],
+    connectedTo: ["NODE_A", "NODE_C"],
   },
   {
-    id: "N3",
+    id: "NODE_C",
     lat: 30.0731,
     lng: 78.2818,
     status: "degraded",
     batteryPercent: 34,
     lastSeen: iso(3.5),
-    connectedTo: ["N1"],
-  },
-  {
-    id: "N4",
-    lat: 30.0968,
-    lng: 78.2935,
-    status: "online",
-    batteryPercent: 61,
-    lastSeen: iso(0.6),
-    connectedTo: ["N2", "N5"],
-  },
-  {
-    id: "N5",
-    lat: 30.0855,
-    lng: 78.3062,
-    status: "degraded",
-    batteryPercent: 18,
-    lastSeen: iso(6.2),
-    connectedTo: ["N4"],
-  },
-  {
-    id: "N6",
-    lat: 30.0702,
-    lng: 78.2962,
-    status: "offline",
-    batteryPercent: 4,
-    lastSeen: iso(27),
-    connectedTo: [],
+    connectedTo: ["NODE_B"],
   },
 ];
+
 
 export const mockSOSMessages: SOSMessage[] = [
   {
     id: "SOS-1042",
-    nodeId: "N4",
+    nodeId: "NODE_B",
     timestamp: iso(2),
     message: "Woman unconscious. Not breathing right. Need doctor NOW. Ward 7 near mosque.",
     coordinates: { lat: 30.0971, lng: 78.2941 },
@@ -72,7 +46,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1041",
-    nodeId: "N2",
+    nodeId: "NODE_B",
     timestamp: iso(7),
     message: "Ankle probably broken. Needs splint. 2 adults with me.",
     coordinates: { lat: 30.0889, lng: 78.2795 },
@@ -80,7 +54,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1040",
-    nodeId: "N1",
+    nodeId: "NODE_A",
     timestamp: iso(11),
     message: "Family of 6 safe on hill. Need water and blankets when possible.",
     coordinates: { lat: 30.0818, lng: 78.2668 },
@@ -88,7 +62,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1039",
-    nodeId: "N3",
+    nodeId: "NODE_C",
     timestamp: iso(16),
     message: "Severe head wound, blood coming through cloth, person is fading.",
     coordinates: { lat: 30.0736, lng: 78.2822 },
@@ -96,14 +70,14 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1038",
-    nodeId: "N5",
+    nodeId: "NODE_C",
     timestamp: iso(23),
     message: "Signal weak ... can't ... rooftop ...",
     triageStatus: "unknown",
   },
   {
     id: "SOS-1037",
-    nodeId: "N2",
+    nodeId: "NODE_B",
     timestamp: iso(31),
     message: "Burns on both hands and face, needs clean dressing. Breathing ok.",
     coordinates: { lat: 30.0902, lng: 78.2812 },
@@ -111,7 +85,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1036",
-    nodeId: "N1",
+    nodeId: "NODE_A",
     timestamp: iso(40),
     message: "12 people at village school. Roof ok. No injuries yet. Need water.",
     coordinates: { lat: 30.0806, lng: 78.2681 },
@@ -119,7 +93,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1035",
-    nodeId: "N6",
+    nodeId: "NODE_A",
     timestamp: iso(52),
     message: "Trapped, can't move, help",
     coordinates: { lat: 30.0707, lng: 78.2955 },
