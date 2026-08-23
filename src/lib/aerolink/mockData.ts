@@ -38,7 +38,7 @@ export const mockNodes: Node[] = [
 export const mockSOSMessages: SOSMessage[] = [
   {
     id: "SOS-1042",
-    nodeId: "N4",
+    nodeId: "NODE_B",
     timestamp: iso(2),
     message: "Woman unconscious. Not breathing right. Need doctor NOW. Ward 7 near mosque.",
     coordinates: { lat: 30.0971, lng: 78.2941 },
@@ -46,7 +46,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1041",
-    nodeId: "N2",
+    nodeId: "NODE_B",
     timestamp: iso(7),
     message: "Ankle probably broken. Needs splint. 2 adults with me.",
     coordinates: { lat: 30.0889, lng: 78.2795 },
@@ -54,7 +54,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1040",
-    nodeId: "N1",
+    nodeId: "NODE_A",
     timestamp: iso(11),
     message: "Family of 6 safe on hill. Need water and blankets when possible.",
     coordinates: { lat: 30.0818, lng: 78.2668 },
@@ -62,7 +62,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1039",
-    nodeId: "N3",
+    nodeId: "NODE_C",
     timestamp: iso(16),
     message: "Severe head wound, blood coming through cloth, person is fading.",
     coordinates: { lat: 30.0736, lng: 78.2822 },
@@ -70,14 +70,14 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1038",
-    nodeId: "N5",
+    nodeId: "NODE_C",
     timestamp: iso(23),
     message: "Signal weak ... can't ... rooftop ...",
     triageStatus: "unknown",
   },
   {
     id: "SOS-1037",
-    nodeId: "N2",
+    nodeId: "NODE_B",
     timestamp: iso(31),
     message: "Burns on both hands and face, needs clean dressing. Breathing ok.",
     coordinates: { lat: 30.0902, lng: 78.2812 },
@@ -85,7 +85,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1036",
-    nodeId: "N1",
+    nodeId: "NODE_A",
     timestamp: iso(40),
     message: "12 people at village school. Roof ok. No injuries yet. Need water.",
     coordinates: { lat: 30.0806, lng: 78.2681 },
@@ -93,7 +93,7 @@ export const mockSOSMessages: SOSMessage[] = [
   },
   {
     id: "SOS-1035",
-    nodeId: "N6",
+    nodeId: "NODE_A",
     timestamp: iso(52),
     message: "Trapped, can't move, help",
     coordinates: { lat: 30.0707, lng: 78.2955 },
