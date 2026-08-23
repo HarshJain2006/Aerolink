@@ -130,21 +130,43 @@ export const mockSOSMessages: SOSMessage[] = [
 
 const SOS_TEMPLATES: { message: string; triageStatus: SOSMessage["triageStatus"] }[] = [
   { message: "Unconscious person pulled from water, not responding.", triageStatus: "critical" },
-  { message: "Deep cut on arm, bleeding controlled. Need dressing.", triageStatus: "injured" },
-  { message: "Six people safe on higher ground, request food drop.", triageStatus: "stable" },
-  { message: "Signal broke mid-transmission ... unclear ... rooftop", triageStatus: "unknown" },
-  { message: "Child with high fever, no medicine available.", triageStatus: "injured" },
   { message: "Gas smell in collapsed block, evacuating now.", triageStatus: "critical" },
+  { message: "Two adults trapped in flooded basement, water at chest height.", triageStatus: "critical" },
+  { message: "Severe bleeding from thigh, tourniquet improvised. Need medic now.", triageStatus: "critical" },
+  { message: "Infant not breathing properly after smoke exposure.", triageStatus: "critical" },
+  { message: "Wall collapsed on two workers, one unresponsive.", triageStatus: "critical" },
+  { message: "Deep cut on arm, bleeding controlled. Need dressing.", triageStatus: "injured" },
+  { message: "Child with high fever, no medicine available.", triageStatus: "injured" },
+  { message: "Suspected broken ribs, painful breathing but conscious.", triageStatus: "injured" },
+  { message: "Elderly man with burns on both hands, needs sterile dressing.", triageStatus: "injured" },
+  { message: "Ankle crushed by debris, cannot walk. Two helpers present.", triageStatus: "injured" },
+  { message: "Dehydrated group of four, one fainted twice.", triageStatus: "injured" },
+  { message: "Six people safe on higher ground, request food drop.", triageStatus: "stable" },
+  { message: "Nine sheltering in community hall, all accounted for.", triageStatus: "stable" },
+  { message: "Family of three safe on second floor, need drinking water.", triageStatus: "stable" },
+  { message: "Village school roof intact, 20 people sheltering, no injuries.", triageStatus: "stable" },
+  { message: "All neighbours evacuated to ridge, request blankets.", triageStatus: "stable" },
+  { message: "Signal broke mid-transmission ... unclear ... rooftop", triageStatus: "unknown" },
+  { message: "Fragment received ... ward 4 ... repeat unreadable", triageStatus: "unknown" },
+  { message: "Partial packet: coordinates corrupted, sender unidentified.", triageStatus: "unknown" },
+  { message: "Relay echo only ... no payload decoded ... retrying", triageStatus: "unknown" },
 ];
+
+/** How many recent messages are treated as "still visible" and never repeated. */
+const RECENT_WINDOW = 8;
 
 let sosCounter = 1043;
 
-export function generateMockSOS(nodes: Node[]): SOSMessage {
+export function generateMockSOS(nodes: Node[], recent: SOSMessage[] = []): SOSMessage {
   const reachable = nodes.filter((n) => n.status !== "offline");
   const pool = reachable.length ? reachable : nodes;
   const node = pool[Math.floor(Math.random() * pool.length)] ?? mockNodes[0]!;
-  const template =
-    SOS_TEMPLATES[Math.floor(Math.random() * SOS_TEMPLATES.length)] ?? SOS_TEMPLATES[0]!;
+
+  const blocked = new Set(recent.slice(0, RECENT_WINDOW).map((m) => m.message));
+  const available = SOS_TEMPLATES.filter((t) => !blocked.has(t.message));
+  const candidates = available.length ? available : SOS_TEMPLATES;
+  const template = candidates[Math.floor(Math.random() * candidates.length)]!;
+
   return {
     id: `SOS-${sosCounter++}`,
     nodeId: node.id,
@@ -157,3 +179,4 @@ export function generateMockSOS(nodes: Node[]): SOSMessage {
     triageStatus: template.triageStatus,
   };
 }
+
