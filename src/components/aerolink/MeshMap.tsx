@@ -108,11 +108,11 @@ export function MeshMap({
         </div>
       </div>
 
-      <div className="relative min-h-0 flex-1">
+      <div ref={hostRef} className="relative min-h-0 flex-1">
         <div className="grid-backdrop absolute inset-0" />
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio="none"
           className="absolute inset-0 h-full w-full"
         >
           {links.map(({ a, b }) => {
