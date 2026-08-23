@@ -1,4 +1,4 @@
-import { clockTime, coords, timeAgo } from "@/lib/aerolink/format";
+import { clockTime, coordsMaybe, timeAgo } from "@/lib/aerolink/format";
 import type { SOSMessage } from "@/lib/aerolink/types";
 import { TriageBadge } from "./StatusBadge";
 
@@ -45,7 +45,7 @@ export function SOSFeed({
               <p className="mt-2 text-sm leading-snug text-foreground/90">{msg.message}</p>
               <div className="mt-1.5 flex items-center gap-3 font-mono text-[11px] text-muted-foreground">
                 <span>{msg.id}</span>
-                <span>{coords(msg.coordinates.lat, msg.coordinates.lng)}</span>
+                <span>{coordsMaybe(msg.coordinates)}</span>
               </div>
             </li>
           );
