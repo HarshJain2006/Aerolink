@@ -99,7 +99,6 @@ export const mockSOSMessages: SOSMessage[] = [
     nodeId: "N5",
     timestamp: iso(23),
     message: "Partial message received via relay ... coordinates uncertain ... help",
-    coordinates: { lat: 30.0851, lng: 78.3058 },
     triageStatus: "unknown",
   },
   {
@@ -128,55 +127,132 @@ export const mockSOSMessages: SOSMessage[] = [
   },
 ];
 
-const SOS_TEMPLATES: { message: string; triageStatus: SOSMessage["triageStatus"] }[] = [
-  { message: "Unconscious person pulled from water, not responding.", triageStatus: "critical" },
-  { message: "Gas smell in collapsed block, evacuating now.", triageStatus: "critical" },
-  { message: "Two adults trapped in flooded basement, water at chest height.", triageStatus: "critical" },
-  { message: "Severe bleeding from thigh, tourniquet improvised. Need medic now.", triageStatus: "critical" },
-  { message: "Infant not breathing properly after smoke exposure.", triageStatus: "critical" },
-  { message: "Wall collapsed on two workers, one unresponsive.", triageStatus: "critical" },
-  { message: "Deep cut on arm, bleeding controlled. Need dressing.", triageStatus: "injured" },
-  { message: "Child with high fever, no medicine available.", triageStatus: "injured" },
-  { message: "Suspected broken ribs, painful breathing but conscious.", triageStatus: "injured" },
-  { message: "Elderly man with burns on both hands, needs sterile dressing.", triageStatus: "injured" },
-  { message: "Ankle crushed by debris, cannot walk. Two helpers present.", triageStatus: "injured" },
-  { message: "Dehydrated group of four, one fainted twice.", triageStatus: "injured" },
-  { message: "Six people safe on higher ground, request food drop.", triageStatus: "stable" },
-  { message: "Nine sheltering in community hall, all accounted for.", triageStatus: "stable" },
-  { message: "Family of three safe on second floor, need drinking water.", triageStatus: "stable" },
-  { message: "Village school roof intact, 20 people sheltering, no injuries.", triageStatus: "stable" },
-  { message: "All neighbours evacuated to ridge, request blankets.", triageStatus: "stable" },
-  { message: "Signal broke mid-transmission ... unclear ... rooftop", triageStatus: "unknown" },
-  { message: "Fragment received ... ward 4 ... repeat unreadable", triageStatus: "unknown" },
-  { message: "Partial packet: coordinates corrupted, sender unidentified.", triageStatus: "unknown" },
-  { message: "Relay echo only ... no payload decoded ... retrying", triageStatus: "unknown" },
+const SOS_TEMPLATES: {
+  message: string;
+  triageStatus: SOSMessage["triageStatus"];
+  kind?: "update" | "fragment";
+}[] = [
+  // Critical — short, long, detailed, cut off, vague, specific, typos
+  { message: "Trapped, can't move, help", triageStatus: "critical" },
+  { message: "Woman unconscious. Not breathing right. Need doctor NOW. Ward 7 near mosque.", triageStatus: "critical" },
+  { message: "Gas leak smell strong. Building cracking. 4 people still inside.", triageStatus: "critical" },
+  { message: "Baby crying but wont respond. Smoke everywhere. Cant get to stairs.", triageStatus: "critical" },
+  { message: "Two workers buried. One still talking, other silent. Please hurry.", triageStatus: "critical" },
+  { message: "Water rising fast on roof. 3 children and my mother. Can't swim.", triageStatus: "critical" },
+  { message: "Heart patient, no medicines, chest pain spreading to left arm", triageStatus: "critical" },
+  { message: "Fire from kitchen spreading. Trapped on 2nd floor. 6 of us total.", triageStatus: "critical" },
+  { message: "Severe head wound, blood coming through cloth, person is fading", triageStatus: "critical" },
+  { message: "Electrocuted trying to switch off mains. Not breathing. Do som", triageStatus: "critical", kind: "fragment" },
+  { message: "Help us roof is collapsing. Not sure how many maybe 8-10 people here", triageStatus: "critical" },
+  { message: "Child fell into well, water high, can hear crying but can't re", triageStatus: "critical", kind: "fragment" },
+
+  // Injured — varied specificity, mixed details, incomplete
+  { message: "Deep cut on left arm, bleeding slow now. Can walk to road.", triageStatus: "injured" },
+  { message: "Ankle probably broken. Needs splint. 2 adults with me.", triageStatus: "injured" },
+  { message: "Child 5 years, fever and vomiting, no ORS packets left", triageStatus: "injured" },
+  { message: "Burns on both hands and face, needs clean dressing. Breathing ok.", triageStatus: "injured" },
+  { message: "Rib pain, hard to breathe deep, but conscious and talking", triageStatus: "injured" },
+  { message: "Metal rod in thigh. Bleeding controlled with belt. Need medic.", triageStatus: "injured" },
+  { message: "Elderly fell, hip hurts, cannot stand. No visible bleeding.", triageStatus: "injured" },
+  { message: "Multiple small cuts, feeling dizzy, maybe dehydrated", triageStatus: "injured" },
+  { message: "Eye injury from flying glass. Vision blurry. Needs help to walk.", triageStatus: "injured" },
+  { message: "Dog bite, deep puncture, swelling. Cannot leave area.", triageStatus: "injured" },
+  { message: "Arm bent wrong way below elbow. Pain unbearable. Please send do", triageStatus: "injured", kind: "fragment" },
+
+  // Stable — counts, requests, shelter details
+  { message: "12 people at village school. Roof ok. No injuries yet. Need water.", triageStatus: "stable" },
+  { message: "Family of 6 safe on hill. Need water and blankets when possible.", triageStatus: "stable" },
+  { message: "Nine in community hall. All accounted for. No urgent medical need.", triageStatus: "stable" },
+  { message: "All neighbours evacuated to ridge. Request food packets if available.", triageStatus: "stable" },
+  { message: "Three adults two kids safe on first floor. Dry. No injuries.", triageStatus: "stable" },
+  { message: "We are at the temple courtyard. About 20 people. No injuries.", triageStatus: "stable" },
+  { message: "Need drinking water only. Everyone safe here.", triageStatus: "stable" },
+  { message: "Can hear helicopter. Waving orange cloth from rooftop. All 4 safe.", triageStatus: "stable" },
+  { message: "Sheltering in shop. 7 people. Doors blocked by debris but safe.", triageStatus: "stable" },
+  { message: "Milk and baby food running out. Infant okay for now. No injuries.", triageStatus: "stable" },
+
+  // Unknown / fragments — signal loss, triangulating, corrupted
+  { message: "Signal weak ... can't ... rooftop ...", triageStatus: "unknown", kind: "fragment" },
+  { message: "Ward 4 ... repeat ... unreadable", triageStatus: "unknown", kind: "fragment" },
+  { message: "Partial packet: coordinates corrupted, sender unidentified.", triageStatus: "unknown", kind: "fragment" },
+  { message: "LoRa relay echo only ... no payload decoded ... retrying", triageStatus: "unknown", kind: "fragment" },
+  { message: "help us ... location is ... near the ...", triageStatus: "unknown", kind: "fragment" },
+  { message: "Still triangulating. No GPS lock yet. Please wait.", triageStatus: "unknown", kind: "fragment" },
+  { message: "Message garbled. Sender unknown. Only fragment received.", triageStatus: "unknown", kind: "fragment" },
+  { message: "...", triageStatus: "unknown", kind: "fragment" },
+  { message: "Can anyone hear me? Signal dropping every few se", triageStatus: "unknown", kind: "fragment" },
+
+  // Location updates / follow-ups from the same reporter
+  { message: "UPDATE: Moved to school roof. Water entered building. Still 5 of us.", triageStatus: "stable", kind: "update" },
+  { message: "Location correction — we are at the warehouse, not the house. 3 people injured.", triageStatus: "injured", kind: "update" },
+  { message: "Re-sending coordinates. Previous location was wrong. We shifted east.", triageStatus: "stable", kind: "update" },
+  { message: "UPDATE: found 2 more survivors here. Now total 7, one critical.", triageStatus: "critical", kind: "update" },
+  { message: "Follow-up: rescued from roof, all on higher ground, no injuries now.", triageStatus: "stable", kind: "update" },
 ];
 
 /** How many recent messages are treated as "still visible" and never repeated. */
 const RECENT_WINDOW = 8;
+
+/** Chance a normal message has no coordinates yet (still triangulating). */
+const NO_COORDS_CHANCE = 0.12;
+/** Fragments and corrupted messages are far more likely to lack coordinates. */
+const FRAGMENT_NO_COORDS_CHANCE = 0.65;
+/** Chance a new message is a location-update follow-up from the most recent reporter. */
+const FOLLOW_UP_CHANCE = 0.18;
 
 let sosCounter = 1043;
 
 export function generateMockSOS(nodes: Node[], recent: SOSMessage[] = []): SOSMessage {
   const reachable = nodes.filter((n) => n.status !== "offline");
   const pool = reachable.length ? reachable : nodes;
-  const node = pool[Math.floor(Math.random() * pool.length)] ?? mockNodes[0]!;
+
+  const recentWithCoords = recent.filter((m) => m.coordinates);
+  const isFollowUp = recentWithCoords.length > 0 && Math.random() < FOLLOW_UP_CHANCE;
+
+  let node: Node;
+  let coordinates: { lat: number; lng: number } | undefined;
+
+  if (isFollowUp) {
+    const last = recentWithCoords[0]!;
+    node = pool.find((n) => n.id === last.nodeId) ?? pool[Math.floor(Math.random() * pool.length)]!;
+    coordinates = {
+      lat: +(last.coordinates!.lat + (Math.random() - 0.5) * 0.006).toFixed(4),
+      lng: +(last.coordinates!.lng + (Math.random() - 0.5) * 0.006).toFixed(4),
+    };
+  } else {
+    node = pool[Math.floor(Math.random() * pool.length)] ?? mockNodes[0]!;
+  }
 
   const blocked = new Set(recent.slice(0, RECENT_WINDOW).map((m) => m.message));
-  const available = SOS_TEMPLATES.filter((t) => !blocked.has(t.message));
-  const candidates = available.length ? available : SOS_TEMPLATES;
-  const template = candidates[Math.floor(Math.random() * candidates.length)]!;
+  let available = SOS_TEMPLATES.filter((t) => !blocked.has(t.message));
+  if (!available.length) available = SOS_TEMPLATES;
+
+  let template: (typeof SOS_TEMPLATES)[number];
+  if (isFollowUp) {
+    const updates = available.filter((t) => t.kind === "update");
+    template = updates.length
+      ? updates[Math.floor(Math.random() * updates.length)]!
+      : available[Math.floor(Math.random() * available.length)]!;
+  } else {
+    template = available[Math.floor(Math.random() * available.length)]!;
+  }
+
+  if (!isFollowUp) {
+    const noCoords = template.kind === "fragment" ? Math.random() < FRAGMENT_NO_COORDS_CHANCE : Math.random() < NO_COORDS_CHANCE;
+    coordinates = noCoords
+      ? undefined
+      : {
+          lat: +(node.lat + (Math.random() - 0.5) * 0.004).toFixed(4),
+          lng: +(node.lng + (Math.random() - 0.5) * 0.004).toFixed(4),
+        };
+  }
 
   return {
     id: `SOS-${sosCounter++}`,
     nodeId: node.id,
     timestamp: new Date().toISOString(),
     message: template.message,
-    coordinates: {
-      lat: +(node.lat + (Math.random() - 0.5) * 0.004).toFixed(4),
-      lng: +(node.lng + (Math.random() - 0.5) * 0.004).toFixed(4),
-    },
+    coordinates,
     triageStatus: template.triageStatus,
   };
 }
-
