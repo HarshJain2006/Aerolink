@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { generateTopoPaths } from "@/lib/aerolink/contours";
 import { coords } from "@/lib/aerolink/format";
 import type { Node, SOSMessage } from "@/lib/aerolink/types";
 
