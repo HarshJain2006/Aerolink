@@ -108,7 +108,7 @@ export function MeshMap({
         </div>
       </div>
 
-      <div ref={hostRef} className="relative min-h-0 flex-1">
+      <div ref={hostRef} className="relative min-h-[340px] flex-1">
         <div className="grid-backdrop absolute inset-0" />
         <svg
           viewBox={`0 0 ${W} ${H}`}
