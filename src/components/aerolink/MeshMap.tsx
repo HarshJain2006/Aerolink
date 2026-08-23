@@ -49,6 +49,9 @@ export function MeshMap({
 
   const { w: W, h: H } = size;
 
+  const topoPaths = generateTopoPaths(W, H);
+
+
   // Safe padded bounds: every node centre lives inside this box, so its circle
   // and label always render fully inside the panel.
   const padLeft = Math.min(NODE_RADIUS + 8, W * 0.2);
@@ -110,7 +113,26 @@ export function MeshMap({
       </div>
 
       <div ref={hostRef} className="relative min-h-[340px] flex-1">
+        {/* Decorative topographic texture — no geographic meaning, panel coords only */}
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          preserveAspectRatio="none"
+          className="pointer-events-none absolute inset-0 h-full w-full"
+          aria-hidden="true"
+        >
+          <g
+            stroke="var(--color-grid)"
+            strokeWidth={1}
+            fill="none"
+            strokeOpacity={0.15}
+          >
+            {topoPaths.map((d, i) => (
+              <path key={i} d={d} />
+            ))}
+          </g>
+        </svg>
         <div className="grid-backdrop absolute inset-0" />
+
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
