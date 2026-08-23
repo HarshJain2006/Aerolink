@@ -35,7 +35,7 @@ function simulateTick(nodes: Node[]): Node[] {
 
       if (Math.random() < 0.18) {
         const candidates = STATUSES.filter((s) => s !== node.status);
-        next.status = candidates[Math.floor(Math.random() * candidates.length)];
+        next.status = candidates[Math.floor(Math.random() * candidates.length)] ?? node.status;
       }
     }
 

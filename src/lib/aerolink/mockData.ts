@@ -141,10 +141,10 @@ let sosCounter = 1043;
 
 export function generateMockSOS(nodes: Node[]): SOSMessage {
   const reachable = nodes.filter((n) => n.status !== "offline");
-  const node = (reachable.length ? reachable : nodes)[
-    Math.floor(Math.random() * (reachable.length || nodes.length))
-  ];
-  const template = SOS_TEMPLATES[Math.floor(Math.random() * SOS_TEMPLATES.length)];
+  const pool = reachable.length ? reachable : nodes;
+  const node = pool[Math.floor(Math.random() * pool.length)] ?? mockNodes[0]!;
+  const template =
+    SOS_TEMPLATES[Math.floor(Math.random() * SOS_TEMPLATES.length)] ?? SOS_TEMPLATES[0]!;
   return {
     id: `SOS-${sosCounter++}`,
     nodeId: node.id,
