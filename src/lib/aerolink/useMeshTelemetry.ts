@@ -96,6 +96,9 @@ function simulateTick(input: Node[]): Node[] {
     }
     return next;
   });
+  // Canonicalise adjacency: every peer reference is made reciprocal (or dropped)
+  // so peer lists, the drawn lines and the link counter can never disagree.
+  return symmetrize(ticked);
 }
 
 export function useMeshTelemetry() {
