@@ -59,7 +59,8 @@ function symmetrize(nodes: Node[]): Node[] {
 
 
 /** Simulate one tick of live telemetry: battery drain, status flips, new SOS. */
-function simulateTick(nodes: Node[]): Node[] {
+function simulateTick(input: Node[]): Node[] {
+  const nodes = input;
   const idx = Math.floor(Math.random() * nodes.length);
   return nodes.map((node, i) => {
     let next: Node = { ...node };
