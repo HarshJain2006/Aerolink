@@ -6,6 +6,14 @@ import type { Node, SOSMessage } from "./types";
 
 const STATUSES: Node["status"][] = ["online", "degraded", "offline"];
 
+/** Rolling window: the feed never shows more than this many messages. */
+export const FEED_LIMIT = 10;
+
+const sortAndCap = (msgs: SOSMessage[]): SOSMessage[] =>
+  [...msgs]
+    .sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp))
+    .slice(0, FEED_LIMIT);
+
 /**
  * Single source of truth for mesh edges: one edge per unique pair of nodes that
  * BOTH list each other in `connectedTo`. The status bar counter and the map both
@@ -59,9 +67,10 @@ function symmetrize(nodes: Node[]): Node[] {
 
 
 /** Simulate one tick of live telemetry: battery drain, status flips, new SOS. */
-function simulateTick(nodes: Node[]): Node[] {
+function simulateTick(input: Node[]): Node[] {
+  const nodes = input;
   const idx = Math.floor(Math.random() * nodes.length);
-  return nodes.map((node, i) => {
+  const ticked = nodes.map((node, i) => {
     let next: Node = { ...node };
     if (i === idx) {
       next.batteryPercent = Math.max(0, +(node.batteryPercent - Math.random() * 1.4).toFixed(1));
@@ -95,6 +104,9 @@ function simulateTick(nodes: Node[]): Node[] {
     }
     return next;
   });
+  // Canonicalise adjacency: every peer reference is made reciprocal (or dropped)
+  // so peer lists, the drawn lines and the link counter can never disagree.
+  return symmetrize(ticked);
 }
 
 export function useMeshTelemetry() {
@@ -115,10 +127,8 @@ export function useMeshTelemetry() {
       try {
         const [n, s] = await Promise.all([fetchNodes(), fetchSOSMessages()]);
         if (cancelled) return;
-        setNodes(n);
-        setMessages(
-          [...s].sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp)),
-        );
+        setNodes(symmetrize(n));
+        setMessages(sortAndCap(s));
         setLastUpdate(new Date().toISOString());
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Telemetry link failed");
@@ -137,15 +147,15 @@ export function useMeshTelemetry() {
         const next = simulateTick(nodesRef.current);
         setNodes(next);
         if (Math.random() < 0.3) {
-          setMessages((prev) => [generateMockSOS(next), ...prev].slice(0, 40));
+          setMessages((prev) => [generateMockSOS(next, prev), ...prev].slice(0, FEED_LIMIT));
         }
         setLastUpdate(new Date().toISOString());
         return;
       }
       try {
         const [n, s] = await Promise.all([fetchNodes(), fetchSOSMessages()]);
-        setNodes(n);
-        setMessages([...s].sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp)));
+        setNodes(symmetrize(n));
+        setMessages(sortAndCap(s));
         setLastUpdate(new Date().toISOString());
         setError(null);
       } catch (e) {

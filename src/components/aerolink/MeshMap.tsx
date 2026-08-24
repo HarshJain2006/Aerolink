@@ -117,26 +117,26 @@ export function MeshMap({
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 h-full w-full"
+          className="pointer-events-none absolute inset-0 z-0 h-full w-full"
           aria-hidden="true"
         >
           <g
-            stroke="var(--color-grid)"
-            strokeWidth={1}
+            stroke="var(--color-muted-foreground)"
+            strokeWidth={1.25}
             fill="none"
-            strokeOpacity={0.15}
+            strokeOpacity={0.2}
           >
             {topoPaths.map((d, i) => (
               <path key={i} d={d} />
             ))}
           </g>
         </svg>
-        <div className="grid-backdrop absolute inset-0" />
+        <div className="grid-backdrop pointer-events-none absolute inset-0 z-[1]" />
 
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          className="absolute inset-0 h-full w-full"
+          className="absolute inset-0 z-[2] h-full w-full"
         >
           {links.map(({ a, b }) => {
             const weak = a.status === "degraded" || b.status === "degraded";
