@@ -119,10 +119,8 @@ export function useMeshTelemetry() {
       try {
         const [n, s] = await Promise.all([fetchNodes(), fetchSOSMessages()]);
         if (cancelled) return;
-        setNodes(n);
-        setMessages(
-          [...s].sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp)),
-        );
+        setNodes(symmetrize(n));
+        setMessages(sortAndCap(s));
         setLastUpdate(new Date().toISOString());
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Telemetry link failed");
