@@ -6,6 +6,14 @@ import type { Node, SOSMessage } from "./types";
 
 const STATUSES: Node["status"][] = ["online", "degraded", "offline"];
 
+/** Rolling window: the feed never shows more than this many messages. */
+export const FEED_LIMIT = 10;
+
+const sortAndCap = (msgs: SOSMessage[]): SOSMessage[] =>
+  [...msgs]
+    .sort((a, b) => +new Date(b.timestamp) - +new Date(a.timestamp))
+    .slice(0, FEED_LIMIT);
+
 /**
  * Single source of truth for mesh edges: one edge per unique pair of nodes that
  * BOTH list each other in `connectedTo`. The status bar counter and the map both
