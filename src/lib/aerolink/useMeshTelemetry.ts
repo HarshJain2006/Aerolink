@@ -139,7 +139,7 @@ export function useMeshTelemetry() {
         const next = simulateTick(nodesRef.current);
         setNodes(next);
         if (Math.random() < 0.3) {
-          setMessages((prev) => [generateMockSOS(next), ...prev].slice(0, 40));
+          setMessages((prev) => [generateMockSOS(next, prev), ...prev].slice(0, FEED_LIMIT));
         }
         setLastUpdate(new Date().toISOString());
         return;
