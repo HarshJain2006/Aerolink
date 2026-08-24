@@ -117,7 +117,7 @@ export function MeshMap({
         <svg
           viewBox={`0 0 ${W} ${H}`}
           preserveAspectRatio="none"
-          className="pointer-events-none absolute inset-0 z-0 h-full w-full"
+          className="pointer-events-none absolute inset-0 z-0 block h-full w-full"
           aria-hidden="true"
         >
           <g
@@ -125,6 +125,7 @@ export function MeshMap({
             strokeWidth={1.25}
             fill="none"
             strokeOpacity={0.2}
+            strokeLinecap="round"
           >
             {topoPaths.map((d, i) => (
               <path key={i} d={d} />
