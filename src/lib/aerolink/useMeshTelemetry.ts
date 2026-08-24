@@ -62,7 +62,7 @@ function symmetrize(nodes: Node[]): Node[] {
 function simulateTick(input: Node[]): Node[] {
   const nodes = input;
   const idx = Math.floor(Math.random() * nodes.length);
-  return nodes.map((node, i) => {
+  const ticked = nodes.map((node, i) => {
     let next: Node = { ...node };
     if (i === idx) {
       next.batteryPercent = Math.max(0, +(node.batteryPercent - Math.random() * 1.4).toFixed(1));
