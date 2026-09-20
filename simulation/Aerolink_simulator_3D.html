@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MESHRELAY 3D — Disaster Response Network Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0a0f0d;
+    --panel: #101613;
+    --panel-2: #141c18;
+    --border: #223029;
+    --border-soft: #1a241f;
+    --text: #e8f2ec;
+    --muted: #7c9187;
+    --muted-2: #56675f;
+    --signal: #ffb238;
+    --signal-dim: #6b4f1c;
+    --mesh: #35e0a4;
+    --wifi: #4fd7ff;
+    --survivor: #ff5f57;
+    --rescue: #4f9dff;
+    --dead: #4a544e;
+    --danger: #ff5f57;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; background: var(--bg); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  .app{ max-width: 1280px; margin: 0 auto; padding: 18px; }
+
+  header{ display:flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .brand-eyebrow{ font-family:'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2.5px; color: var(--signal); text-transform: uppercase; margin-bottom: 6px; }
+  h1{ margin:0; font-family:'JetBrains Mono', monospace; font-weight: 700; font-size: 26px; letter-spacing: 0.5px; }
+  h1 span{ color: var(--muted); font-weight:500; }
+  .subtitle{ font-size: 12.5px; color: var(--muted); margin-top: 4px; max-width: 560px; line-height: 1.5; }
+
+  .status-strip{ display:flex; gap: 10px; flex-wrap: wrap; }
+  .status-chip{ font-family:'JetBrains Mono', monospace; font-size: 11px; border: 1px solid var(--border); background: var(--panel); border-radius: 3px; padding: 7px 10px; min-width: 108px; text-align:left; }
+  .status-chip .label{ color: var(--muted-2); letter-spacing: 1px; display:block; font-size:9.5px; margin-bottom:3px;}
+  .status-chip .val{ color: var(--text); font-weight:600; font-size: 13px;}
+  .status-chip .val.ok{ color: var(--mesh); }
+  .status-chip .val.warn{ color: var(--signal); }
+  .status-chip .val.bad{ color: var(--danger); }
+
+  .layout{ display:grid; grid-template-columns: 1fr 336px; gap: 16px; }
+  @media (max-width: 860px){ .layout{ grid-template-columns: 1fr; } }
+
+  .map-panel{ background:#090d0b; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; position: relative; aspect-ratio: 900/600; }
+  #threeContainer{ position:absolute; inset:0; cursor: grab; }
+  #threeContainer.mode-active{ cursor: crosshair; }
+  #threeContainer:active{ cursor: grabbing; }
+  #threeContainer.mode-active:active{ cursor: crosshair; }
+  #threeContainer canvas{ display:block; width:100%; height:100%; }
+
+  .map-hint{ position:absolute; top:10px; left:10px; font-family:'JetBrains Mono', monospace; font-size: 10.5px; letter-spacing: 1px; color: var(--signal); background: rgba(10,15,13,0.75); border: 1px solid var(--signal-dim); padding: 5px 9px; border-radius: 3px; display:none; pointer-events:none; z-index:5; }
+  .map-hint.show{ display:block; }
+  .cam-hint{ position:absolute; bottom:10px; left:10px; font-family:'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.5px; color: var(--muted-2); background: rgba(10,15,13,0.6); padding: 4px 8px; border-radius: 3px; pointer-events:none; z-index:5; }
+
+  .sidebar{ display:flex; flex-direction:column; gap:12px; }
+  .panel{ background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+  .panel h2{ font-family:'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 1.8px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px 0; display:flex; align-items:center; gap:6px; }
+  .panel h2::before{ content:""; width:6px; height:6px; background: var(--mesh); border-radius:1px; display:inline-block; }
+
+  .btn-grid{ display:flex; flex-direction:column; gap:7px; }
+  button{ font-family:'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 500; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); padding: 9px 12px; cursor: pointer; text-align:left; display:flex; align-items:center; justify-content: space-between; transition: border-color .15s, background .15s; }
+  button:hover{ border-color: var(--muted-2); background:#182019; }
+  button.active{ border-color: var(--signal); background: rgba(255,178,56,0.10); color: var(--signal); }
+  button.primary{ background: var(--signal); color: #1a1305; border-color: var(--signal); font-weight: 600; }
+  button.primary:hover{ background:#ffbf5c; }
+  button.danger-mode.active{ border-color: var(--danger); background: rgba(255,95,87,0.10); color: var(--danger); }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+  button .kbd{ font-family:'JetBrains Mono', monospace; font-size: 9.5px; color: var(--muted-2); }
+
+  .msg-row{ display:flex; gap:6px; margin-top:2px; }
+  .msg-row input{ flex:1; background: var(--panel-2); border: 1px solid var(--border); color: var(--text); font-family:'IBM Plex Sans', sans-serif; font-size: 12.5px; padding: 8px 9px; border-radius: 4px; min-width: 0; }
+  .msg-row input:focus{ outline:none; border-color: var(--mesh); }
+  .msg-row button{ flex-shrink:0; }
+
+  .legend-item{ display:flex; align-items:center; gap:9px; font-size: 11.5px; color: var(--muted); padding: 4px 0; }
+  .legend-swatch{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .legend-line{ width:16px; height:2px; flex-shrink:0; }
+  .note{ font-size: 11px; color: var(--muted-2); line-height: 1.55; margin-top: 8px; border-top: 1px solid var(--border-soft); padding-top: 9px; }
+
+  .roster{ display:flex; flex-direction:column; gap:5px; }
+  .roster-empty{ font-size: 11.5px; color: var(--muted-2); font-style:italic; }
+  .roster-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:'JetBrains Mono', monospace; font-size: 11.5px; padding: 7px 9px; border-radius: 4px; border: 1px solid var(--border); background: var(--panel-2); cursor: pointer; }
+  .roster-row:hover{ border-color: var(--muted-2); }
+  .roster-row.selected{ border-color: var(--survivor); background: rgba(255,95,87,0.10); }
+  .roster-row .r-id{ color: var(--text); font-weight:600; }
+  .roster-row .r-status{ font-size: 10px; letter-spacing: 0.5px; }
+  .roster-row .r-status.ok{ color: var(--mesh); }
+  .roster-row .r-status.bad{ color: var(--muted-2); }
+
+  .log-panel{ flex:1; display:flex; flex-direction:column; min-height: 180px; }
+  .log-feed{ font-family:'JetBrains Mono', monospace; font-size: 11px; line-height: 1.7; overflow-y: auto; max-height: 220px; padding-right: 4px; }
+  .log-feed::-webkit-scrollbar{ width:5px; }
+  .log-feed::-webkit-scrollbar-thumb{ background: var(--border); border-radius:3px; }
+  .log-line{ display:flex; gap:7px; margin-bottom:2px; }
+  .log-time{ color: var(--muted-2); flex-shrink:0; }
+  .log-text.info{ color: var(--muted); }
+  .log-text.ok{ color: var(--mesh); }
+  .log-text.warn{ color: var(--signal); }
+  .log-text.bad{ color: var(--danger); }
+
+  footer{ margin-top: 14px; text-align:center; font-size: 10.5px; color: var(--muted-2); font-family:'JetBrains Mono', monospace; letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">FIELD OPS · PROTOTYPE SIMULATION · 3D</div>
+      <h1>MESHRELAY <span>// disaster response network</span></h1>
+      <div class="subtitle">Same mesh model as the 2D console, rendered as a live tactical scene. Drag to orbit, scroll to zoom — click the ground to deploy, click a node or survivor to select it.</div>
+    </div>
+    <div class="status-strip" id="statusStrip"></div>
+  </header>
+
+  <div class="layout">
+    <div class="map-panel">
+      <div id="threeContainer">
+        <div class="map-hint" id="mapHint"></div>
+        <div class="cam-hint">DRAG: ORBIT · SCROLL: ZOOM</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="panel">
+        <h2>Deployment</h2>
+        <div class="btn-grid">
+          <button class="primary" id="btnSweep">Deploy Node Sweep <span class="kbd">drone drop</span></button>
+          <button id="btnAddNode">+ Place Node <span class="kbd">manual</span></button>
+          <button id="btnSurvivor">+ Place Survivor <span class="kbd">phone</span></button>
+          <button id="btnRescue">Place Rescue HQ <span class="kbd">base</span></button>
+          <button id="btnKill" class="danger-mode">Disable Node <span class="kbd">simulate damage</span></button>
+          <button id="btnReset">Reset Simulation</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Survivors <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(tap to select sender)</span></h2>
+        <div class="roster" id="roster"><div class="roster-empty">No survivors placed yet.</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>Send Message</h2>
+        <div class="msg-row">
+          <input id="msgInput" type="text" placeholder="Need medical help, 3 injured" maxlength="60">
+          <button class="primary" id="btnSend">Send</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Legend</h2>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--mesh)"></span> Active relay node</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--dead)"></span> Disabled / damaged node</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--survivor)"></span> Survivor phone</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--rescue)"></span> Rescue HQ</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--mesh)"></span> Mesh radio link (node ⇄ node)</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--wifi)"></span> WiFi hop (phone ⇄ node)</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--signal)"></span> Live message route</div>
+        <div class="note">Mesh links use long-range radio between nodes. Each node also runs a local WiFi AP so any phone can join directly — that's the last hop to a survivor.</div>
+      </div>
+
+      <div class="panel log-panel">
+        <h2>Event Log</h2>
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>PROTOTYPE — SIMULATED RADIO RANGE, NOT LIVE TELEMETRY</footer>
+</div>
+
+<script>
+(function(){
+  const MESH_RANGE = 205;
+  const WIFI_RANGE = 95;
+  const BEACON_H = 17.6;
+
+  let nodes = [];
+  let nextId = 1;
+  let survivors = [];
+  let nextSurvivorId = 1;
+  let selectedSurvivorId = null;
+  let rescue = null;
+  let mode = null;
+  let pending = [];
+  let busy = false;
+  let msgCounter = 1;
+  let activeRotors = [];
+
+  const container = document.getElementById('threeContainer');
+  const mapHint = document.getElementById('mapHint');
+  const logFeed = document.getElementById('logFeed');
+  const statusStrip = document.getElementById('statusStrip');
+
+  /* ---------------- three.js setup ---------------- */
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0f0d);
+  scene.fog = new THREE.Fog(0x0a0f0d, 420, 980);
+
+  const camera = new THREE.PerspectiveCamera(50, 1, 1, 3000);
+  camera.position.set(0, 420, 480);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 8, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.maxPolarAngle = Math.PI / 2 - 0.03;
+  controls.minDistance = 140;
+  controls.maxDistance = 950;
+
+  scene.add(new THREE.AmbientLight(0x24352c, 1.2));
+  const keyLight = new THREE.DirectionalLight(0xbfe8d8, 0.65);
+  keyLight.position.set(180, 320, 120);
+  scene.add(keyLight);
+  const rimLight = new THREE.DirectionalLight(0xffb238, 0.22);
+  rimLight.position.set(-220, 160, -160);
+  scene.add(rimLight);
+
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(1000, 700),
+    new THREE.MeshStandardMaterial({ color: 0x0c1310, roughness: 1 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  scene.add(ground);
+  const grid = new THREE.GridHelper(1000, 50, 0x1c2a22, 0x131f19);
+  grid.position.y = 0.03;
+  scene.add(grid);
+
+  const edgeGroup = new THREE.Group(); scene.add(edgeGroup);
+  const wifiGroup = new THREE.Group(); scene.add(wifiGroup);
+
+  function resize(){
+    const w = container.clientWidth, h = container.clientHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    activeRotors.forEach(r => r.rotation.y += 1.3);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  /* ---------------- helpers ---------------- */
+  function toWorld(x2d, y2d){ return { wx: x2d - 450, wz: y2d - 300 }; }
+  function dist2d(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  function jitter(v, amt){ return v + (Math.random() * amt * 2 - amt); }
+  function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+  function easeInOut(t){ return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+  function tweenVec(vec, target, duration){
+    return new Promise(resolve=>{
+      const start = performance.now();
+      const from = { x: vec.x, y: vec.y, z: vec.z };
+      function step(t){
+        const p = Math.min(1, (t - start) / duration);
+        const e = easeInOut(p);
+        vec.x = from.x + (target.x - from.x) * e;
+        vec.y = from.y + (target.y - from.y) * e;
+        vec.z = from.z + (target.z - from.z) * e;
+        if (p < 1) requestAnimationFrame(step); else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  function nowStamp(){ return new Date().toTimeString().slice(0,8); }
+  function log(text, level){
+    level = level || 'info';
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="log-time">${nowStamp()}</span><span class="log-text ${level}">${text}</span>`;
+    logFeed.appendChild(line);
+    logFeed.scrollTop = logFeed.scrollHeight;
+  }
+
+  function roundRectPath(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function makeLabelSprite(initialText, colorHex){
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const texture = new THREE.CanvasTexture(canvas);
+    const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
+    const sprite = new THREE.Sprite(material);
+    sprite.scale.set(22, 5.5, 1);
+    function setText(t){
+      ctx.clearRect(0,0,256,64);
+      ctx.fillStyle = 'rgba(9,13,11,0.8)';
+      roundRectPath(ctx,4,15,248,34,6); ctx.fill();
+      ctx.font = "600 21px 'JetBrains Mono', monospace";
+      ctx.fillStyle = colorHex;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(t, 128, 32);
+      texture.needsUpdate = true;
+    }
+    setText(initialText);
+    return { sprite, setText };
+  }
+
+  function spawnPulse(x, y, z, color){
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(2, 2.6, 32),
+      new THREE.MeshBasicMaterial({ color, transparent:true, opacity:0.9, side: THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI/2;
+    ring.position.set(x, y, z);
+    scene.add(ring);
+    const start = performance.now();
+    function step(t){
+      const p = Math.min(1, (t-start)/900);
+      const s = 1 + p*7;
+      ring.scale.set(s,s,s);
+      ring.material.opacity = 0.9*(1-p);
+      if(p<1) requestAnimationFrame(step); else scene.remove(ring);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---------------- entity builders ---------------- */
+  function buildNodeMesh(){
+    const g = new THREE.Group();
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x0d1613, metalness:0.3, roughness:0.6 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(2.4,3.2,6,8), baseMat);
+    base.position.y = 3;
+    g.add(base);
+    const antennaMat = new THREE.MeshStandardMaterial({ color:0x2a332d });
+    const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,10,6), antennaMat);
+    antenna.position.y = 11;
+    g.add(antenna);
+    const beaconMat = new THREE.MeshStandardMaterial({ color:0x35e0a4, emissive:0x35e0a4, emissiveIntensity:1.4 });
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(1.6,12,12), beaconMat);
+    beacon.position.y = BEACON_H;
+    g.add(beacon);
+    g.userData = {};
+    return { group: g, base, antenna, beacon };
+  }
+
+  function buildSurvivorMesh(){
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color:0xff5f57, emissive:0xff5f57, emissiveIntensity:0.6 });
+    const pin = new THREE.Mesh(new THREE.ConeGeometry(2.2,7,8), mat);
+    pin.position.y = 3.5;
+    g.add(pin);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(1.6,10,10), mat);
+    head.position.y = 8;
+    g.add(head);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(4,4.6,32),
+      new THREE.MeshBasicMaterial({ color:0xffb238, side:THREE.DoubleSide, transparent:true, opacity:0.9 })
+    );
+    ring.rotation.x = -Math.PI/2; ring.position.y = 0.15; ring.visible = false;
+    g.add(ring);
+    return { group: g, ring };
+  }
+
+  function buildRescueMesh(){
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color:0x4f9dff, emissive:0x4f9dff, emissiveIntensity:0.55 });
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(5,5,2,6), mat);
+    base.position.y = 1;
+    g.add(base);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.3,10,6), new THREE.MeshStandardMaterial({ color:0x2a332d }));
+    pole.position.y = 7;
+    g.add(pole);
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(4,2.4), new THREE.MeshStandardMaterial({ color:0x4f9dff, emissive:0x4f9dff, emissiveIntensity:0.55, side:THREE.DoubleSide }));
+    flag.position.set(2,10,0);
+    g.add(flag);
+    return { group: g };
+  }
+
+  function buildDrone(){
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(6,2,6), new THREE.MeshStandardMaterial({ color:0xffb238, emissive:0xffb238, emissiveIntensity:0.3 }));
+    g.add(body);
+    const rotors = [];
+    [[4,4],[-4,4],[4,-4],[-4,-4]].forEach(([ax,az])=>{
+      const rotor = new THREE.Mesh(new THREE.CylinderGeometry(1.8,1.8,0.3,10), new THREE.MeshStandardMaterial({ color:0x1c2a22, transparent:true, opacity:0.7 }));
+      rotor.position.set(ax,1.2,az);
+      g.add(rotor);
+      rotors.push(rotor);
+    });
+    return { group: g, rotors };
+  }
+
+  /* ---------------- graph / topology ---------------- */
+  function aliveNodes(){ return nodes.filter(n=>n.alive); }
+  function nodeById(id){ return nodes.find(n=>n.id===id); }
+  function nearestAlive(pt, range){
+    let best=null, bestD=Infinity;
+    aliveNodes().forEach(n=>{ const d=dist2d(pt,n); if(d<=range && d<bestD){ bestD=d; best=n; } });
+    return best;
+  }
+  function computeEdges(){
+    const alive = aliveNodes(); const edges=[];
+    for(let i=0;i<alive.length;i++) for(let j=i+1;j<alive.length;j++){
+      if(dist2d(alive[i],alive[j]) <= MESH_RANGE) edges.push([alive[i].id, alive[j].id]);
+    }
+    return edges;
+  }
+  function buildAdjacency(edges){
+    const adj={}; aliveNodes().forEach(n=>adj[n.id]=[]);
+    edges.forEach(([a,b])=>{ adj[a].push(b); adj[b].push(a); });
+    return adj;
+  }
+  function bfsPath(adj,startId,endId){
+    if(startId===endId) return [startId];
+    const visited=new Set([startId]); const queue=[[startId]];
+    while(queue.length){
+      const path=queue.shift(); const last=path[path.length-1];
+      for(const nb of (adj[last]||[])){
+        if(!visited.has(nb)){ visited.add(nb); const np=[...path,nb]; if(nb===endId) return np; queue.push(np); }
+      }
+    }
+    return null;
+  }
+
+  /* ---------------- render / sync ---------------- */
+  function rebuildEdges(){
+    edgeGroup.clear();
+    computeEdges().forEach(([a,b])=>{
+      const A=nodeById(a), B=nodeById(b);
+      const wA=toWorld(A.x,A.y), wB=toWorld(B.x,B.y);
+      const pts=[ new THREE.Vector3(wA.wx,BEACON_H,wA.wz), new THREE.Vector3(wB.wx,BEACON_H,wB.wz) ];
+      const geo=new THREE.BufferGeometry().setFromPoints(pts);
+      edgeGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color:0x35e0a4, transparent:true, opacity:0.55 })));
+    });
+  }
+
+  function rebuildWifiLinks(){
+    wifiGroup.clear();
+    survivors.forEach(s=>{
+      const near = nearestAlive(s, WIFI_RANGE);
+      s.connectedId = near ? near.id : null;
+      if(near){
+        const w1=toWorld(s.x,s.y), w2=toWorld(near.x,near.y);
+        const pts=[ new THREE.Vector3(w1.wx,9,w1.wz), new THREE.Vector3(w2.wx,BEACON_H,w2.wz) ];
+        const geo=new THREE.BufferGeometry().setFromPoints(pts);
+        const line=new THREE.Line(geo, new THREE.LineDashedMaterial({ color:0x4fd7ff, dashSize:3, gapSize:2, transparent:true, opacity:0.8 }));
+        line.computeLineDistances();
+        wifiGroup.add(line);
+      }
+      s.label.setText(`S${s.id} · ${near?'LINKED':'SEARCHING'}`);
+    });
+    if(rescue){
+      const near = nearestAlive(rescue, WIFI_RANGE);
+      rescue.connectedId = near ? near.id : null;
+      if(near){
+        const w1=toWorld(rescue.x,rescue.y), w2=toWorld(near.x,near.y);
+        const pts=[ new THREE.Vector3(w1.wx,11,w1.wz), new THREE.Vector3(w2.wx,BEACON_H,w2.wz) ];
+        const geo=new THREE.BufferGeometry().setFromPoints(pts);
+        const line=new THREE.Line(geo, new THREE.LineDashedMaterial({ color:0x4fd7ff, dashSize:3, gapSize:2, transparent:true, opacity:0.8 }));
+        line.computeLineDistances();
+        wifiGroup.add(line);
+      }
+      rescue.label.setText(`RESCUE HQ · ${near?'LINKED':'SEARCHING'}`);
+    }
+  }
+
+  function updateStatus(edgeCount){
+    const alive = aliveNodes().length, total = nodes.length;
+    const survLinked = survivors.filter(s=>s.connectedId).length;
+    const rescStatus = !rescue ? 'UNPLACED' : (rescue.connectedId ? 'LINKED' : 'SEARCHING');
+    statusStrip.innerHTML = `
+      <div class="status-chip"><span class="label">NODES</span><span class="val ${alive<total?'warn':'ok'}">${alive}/${total} ALIVE</span></div>
+      <div class="status-chip"><span class="label">MESH LINKS</span><span class="val ok">${edgeCount}</span></div>
+      <div class="status-chip"><span class="label">SURVIVORS</span><span class="val ${survivors.length && survLinked<survivors.length?'warn':(survivors.length?'ok':'')}">${survLinked}/${survivors.length} LINKED</span></div>
+      <div class="status-chip"><span class="label">RESCUE HQ</span><span class="val ${rescStatus==='LINKED'?'ok':(rescStatus==='SEARCHING'?'bad':'')}">${rescStatus}</span></div>
+      <div class="status-chip"><span class="label">QUEUED MSG</span><span class="val ${pending.length?'warn':''}">${pending.length}</span></div>
+    `;
+  }
+
+  function renderRoster(){
+    const roster = document.getElementById('roster');
+    if(survivors.length===0){ roster.innerHTML = '<div class="roster-empty">No survivors placed yet.</div>'; return; }
+    roster.innerHTML = '';
+    survivors.forEach(s=>{
+      const row = document.createElement('div');
+      row.className = 'roster-row' + (s.id===selectedSurvivorId?' selected':'');
+      row.innerHTML = `<span class="r-id">${s.id===selectedSurvivorId?'● ':''}S${s.id}</span><span class="r-status ${s.connectedId?'ok':'bad'}">${s.connectedId?'LINKED':'SEARCHING'}</span>`;
+      row.addEventListener('click', ()=> selectSurvivor(s.id));
+      roster.appendChild(row);
+    });
+  }
+
+  function updateAll(){
+    rebuildEdges();
+    rebuildWifiLinks();
+    updateStatus(computeEdges().length);
+    renderRoster();
+  }
+
+  /* ---------------- entities ---------------- */
+  function addNode(x2d, y2d, manual){
+    const { wx, wz } = toWorld(x2d, y2d);
+    const n = { id: nextId++, x:x2d, y:y2d, alive:true };
+    const built = buildNodeMesh();
+    built.group.position.set(wx,0,wz);
+    built.group.userData = { kind:'node', id:n.id };
+    scene.add(built.group);
+    const label = makeLabelSprite('N'+n.id, '#9fe8c9');
+    label.sprite.position.set(wx,22,wz);
+    scene.add(label.sprite);
+    n.mesh = built; n.label = label;
+    nodes.push(n);
+    spawnPulse(wx,0.2,wz,0x35e0a4);
+    updateAll();
+    if(manual) log(`NODE N${n.id} deployed manually.`, 'ok');
+    attemptFlushPending();
+    return n;
+  }
+
+  function selectSurvivor(id){
+    selectedSurvivorId = id;
+    survivors.forEach(s => s.mesh.ring.visible = (s.id === id));
+    renderRoster();
+  }
+
+  function placeSurvivor(x2d, y2d){
+    const { wx, wz } = toWorld(x2d, y2d);
+    const built = buildSurvivorMesh();
+    built.group.position.set(wx,0,wz);
+    built.group.userData = { kind:'survivor', id: nextSurvivorId };
+    scene.add(built.group);
+    const label = makeLabelSprite('S'+nextSurvivorId+' · SEARCHING', '#ff9992');
+    label.sprite.position.set(wx,12,wz);
+    scene.add(label.sprite);
+    const s = { id: nextSurvivorId++, x:x2d, y:y2d, connectedId:null, mesh:built, label };
+    survivors.push(s);
+    selectSurvivor(s.id);
+    log(`Survivor S${s.id} placed on map — set as active sender.`, 'info');
+    updateAll();
+    attemptFlushPending();
+  }
+
+  function placeRescue(x2d, y2d){
+    const { wx, wz } = toWorld(x2d, y2d);
+    if(!rescue){
+      const built = buildRescueMesh();
+      built.group.userData = { kind:'rescue' };
+      scene.add(built.group);
+      const label = makeLabelSprite('RESCUE HQ · SEARCHING', '#9cc6ff');
+      scene.add(label.sprite);
+      rescue = { x:x2d, y:y2d, connectedId:null, mesh:built, label };
+      log('Rescue HQ established.', 'info');
+    } else {
+      rescue.x = x2d; rescue.y = y2d;
+      log('Rescue HQ relocated.', 'info');
+    }
+    rescue.mesh.group.position.set(wx,0,wz);
+    rescue.label.sprite.position.set(wx,14,wz);
+    updateAll();
+    attemptFlushPending();
+  }
+
+  function killNode(id){
+    const n = nodeById(id);
+    if(!n || !n.alive) return;
+    n.alive = false;
+    n.mesh.base.material.color.set(0x33393a);
+    n.mesh.antenna.material.color.set(0x2a2f2c);
+    n.mesh.beacon.material.color.set(0x4a544e);
+    n.mesh.beacon.material.emissive.set(0x000000);
+    n.mesh.beacon.material.emissiveIntensity = 0;
+    n.mesh.group.rotation.z = 0.55;
+    n.mesh.group.rotation.x = 0.12;
+    log(`NODE N${n.id} OFFLINE — link lost, simulating field damage.`, 'bad');
+    log('SELF-HEALING: recalculating mesh topology…', 'warn');
+    updateAll();
+    setTimeout(()=> attemptFlushPending(), 500);
+  }
+
+  /* ---------------- drone sweep ---------------- */
+  const dropPoints = [
+    {x:120,y:140},{x:270,y:190},{x:410,y:120},{x:560,y:175},{x:700,y:130},
+    {x:680,y:300},{x:540,y:350},{x:390,y:300},{x:240,y:360},{x:140,y:290}
+  ];
+
+  async function dropCapsule(wx, wz){
+    const capsule = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(1,1,2.6,8), new THREE.MeshStandardMaterial({ color:0xffb238 }));
+    capsule.add(body);
+    const chute = new THREE.Mesh(new THREE.ConeGeometry(3,3,10,1,true), new THREE.MeshStandardMaterial({ color:0xe8f2ec, side:THREE.DoubleSide, transparent:true, opacity:0.75 }));
+    chute.position.y = 5; chute.rotation.x = Math.PI;
+    capsule.add(chute);
+    capsule.position.set(wx,52,wz);
+    scene.add(capsule);
+    await tweenVec(capsule.position, {x:wx,y:0.5,z:wz}, 420);
+    scene.remove(capsule);
+    spawnPulse(wx,0.2,wz,0xffb238);
+  }
+
+  const btnSweep = document.getElementById('btnSweep');
+  btnSweep.addEventListener('click', async ()=>{
+    if(busy) return;
+    busy = true; btnSweep.disabled = true;
+    log('Drone launched — beginning node deployment sweep.', 'ok');
+
+    const drone = buildDrone();
+    const p0 = toWorld(dropPoints[0].x, dropPoints[0].y);
+    drone.group.position.set(p0.wx, 55, p0.wz);
+    scene.add(drone.group);
+    activeRotors.push(...drone.rotors);
+
+    await sleep(200);
+    for(let i=0;i<dropPoints.length;i++){
+      const p = dropPoints[i];
+      const { wx, wz } = toWorld(p.x, p.y);
+      await tweenVec(drone.group.position, {x:wx,y:55,z:wz}, 480);
+      await dropCapsule(wx, wz);
+      const nx = jitter(p.x,10), ny = jitter(p.y,10);
+      addNode(nx, ny, false);
+      log(`NODE N${nextId-1} deployed — establishing radio links…`, 'ok');
+      await sleep(120);
+    }
+    await sleep(150);
+    activeRotors = activeRotors.filter(r => !drone.rotors.includes(r));
+    scene.remove(drone.group);
+    log(`Sweep complete — ${dropPoints.length} nodes online, ${computeEdges().length} mesh links formed.`, 'ok');
+    busy = false; btnSweep.disabled = false;
+    attemptFlushPending();
+  });
+
+  /* ---------------- messaging ---------------- */
+  function getSelectedSurvivor(){ return survivors.find(s=>s.id===selectedSurvivorId) || null; }
+
+  function trySend(text){
+    if(busy) return;
+    if(!text) text = 'Need assistance — location marked.';
+    if(survivors.length===0){ log('Cannot send — place a survivor on the map first.', 'bad'); return; }
+    const surv = getSelectedSurvivor();
+    if(!surv){ log('Cannot send — select a survivor from the roster first.', 'bad'); return; }
+    if(!rescue){ log('Cannot send — place a Rescue HQ on the map first.', 'bad'); return; }
+    if(!surv.connectedId){ log(`NO SIGNAL — S${surv.id} is out of WiFi range of any node. Message queued.`, 'warn'); }
+
+    const id = msgCounter++;
+    log(`MSG-${id} queued from S${surv.id}: "${text}"`, 'info');
+    pending.push({ id, text, survivorId: surv.id, notified:false });
+    document.getElementById('msgInput').value = '';
+    attemptFlushPending();
+  }
+
+  async function attemptFlushPending(){
+    if(busy || pending.length===0) return;
+    const adj = buildAdjacency(computeEdges());
+    for(let i=0;i<pending.length;i++){
+      const msg = pending[i];
+      const surv = survivors.find(s=>s.id===msg.survivorId);
+      if(!surv || !surv.connectedId || !rescue || !rescue.connectedId){
+        if(!msg.notified){ log(`MSG-${msg.id} (S${msg.survivorId}) — no route yet, holding for store-and-forward.`, 'warn'); msg.notified = true; }
+        continue;
+      }
+      const path = bfsPath(adj, surv.connectedId, rescue.connectedId);
+      if(!path){
+        if(!msg.notified){ log(`MSG-${msg.id} (S${msg.survivorId}) — mesh partitioned, holding for store-and-forward.`, 'warn'); msg.notified = true; }
+        continue;
+      }
+      pending.splice(i,1);
+      await animateRoute(surv, path, msg);
+      attemptFlushPending();
+      return;
+    }
+  }
+
+  function animateHop(mesh, from, to, duration){
+    return new Promise(resolve=>{
+      const start = performance.now();
+      function step(t){
+        const p = Math.min(1,(t-start)/duration);
+        mesh.position.x = from.x + (to.x-from.x)*p;
+        mesh.position.z = from.z + (to.z-from.z)*p;
+        mesh.position.y = from.y + (to.y-from.y)*p + Math.sin(p*Math.PI)*6;
+        if(p<1) requestAnimationFrame(step); else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  async function animateRoute(surv, nodeIdPath, msg){
+    busy = true;
+    const ws = toWorld(surv.x, surv.y);
+    const wr = toWorld(rescue.x, rescue.y);
+    const pts = [
+      { x: ws.wx, y: 9, z: ws.wz },
+      ...nodeIdPath.map(id => { const n = nodeById(id); const w = toWorld(n.x, n.y); return { x:w.wx, y:BEACON_H, z:w.wz }; }),
+      { x: wr.wx, y: 11, z: wr.wz }
+    ];
+    log(`MSG-${msg.id} routing: S${surv.id} → ${nodeIdPath.map(id=>'N'+id).join(' → ')} → RESCUE HQ`, 'info');
+
+    const routeGeo = new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(p.x,p.y,p.z)));
+    const routeLine = new THREE.Line(routeGeo, new THREE.LineBasicMaterial({ color:0xffb238, transparent:true, opacity:0.9 }));
+    scene.add(routeLine);
+
+    const packet = new THREE.Mesh(new THREE.SphereGeometry(1.4,12,12), new THREE.MeshStandardMaterial({ color:0xffb238, emissive:0xffb238, emissiveIntensity:1.6 }));
+    packet.position.set(pts[0].x, pts[0].y, pts[0].z);
+    scene.add(packet);
+
+    const hopMs = 320;
+    for(let i=0;i<pts.length-1;i++){
+      await animateHop(packet, pts[i], pts[i+1], hopMs);
+      if(i < pts.length-2) spawnPulse(pts[i+1].x, 0.2, pts[i+1].z, 0xffb238);
+    }
+    scene.remove(packet); scene.remove(routeLine);
+    const hops = nodeIdPath.length;
+    const etaSec = ((pts.length-1)*hopMs/1000).toFixed(1);
+    log(`MSG-${msg.id} DELIVERED to Rescue HQ — ${hops} relay hop(s), ~${etaSec}s.`, 'ok');
+    busy = false;
+  }
+
+  /* ---------------- interaction ---------------- */
+  const btnAddNode = document.getElementById('btnAddNode');
+  const btnSurvivor = document.getElementById('btnSurvivor');
+  const btnRescue = document.getElementById('btnRescue');
+  const btnKill = document.getElementById('btnKill');
+  const btnReset = document.getElementById('btnReset');
+  const btnSend = document.getElementById('btnSend');
+  const msgInput = document.getElementById('msgInput');
+
+  function setMode(m){
+    mode = (mode === m) ? null : m;
+    [btnAddNode,btnSurvivor,btnRescue,btnKill].forEach(b=>b.classList.remove('active'));
+    container.classList.remove('mode-active');
+    mapHint.classList.remove('show');
+    if(mode==='addNode'){ btnAddNode.classList.add('active'); container.classList.add('mode-active'); mapHint.textContent='CLICK GROUND TO DEPLOY NODE'; mapHint.classList.add('show'); }
+    if(mode==='survivor'){ btnSurvivor.classList.add('active'); container.classList.add('mode-active'); mapHint.textContent='CLICK GROUND TO ADD A SURVIVOR (repeatable)'; mapHint.classList.add('show'); }
+    if(mode==='rescue'){ btnRescue.classList.add('active'); container.classList.add('mode-active'); mapHint.textContent='CLICK GROUND TO PLACE RESCUE HQ'; mapHint.classList.add('show'); }
+    if(mode==='kill'){ btnKill.classList.add('active'); container.classList.add('mode-active'); mapHint.textContent='CLICK A NODE TO DISABLE IT'; mapHint.classList.add('show'); }
+  }
+  btnAddNode.addEventListener('click', ()=> setMode('addNode'));
+  btnSurvivor.addEventListener('click', ()=> setMode('survivor'));
+  btnRescue.addEventListener('click', ()=> setMode('rescue'));
+  btnKill.addEventListener('click', ()=> setMode('kill'));
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let downPos = null;
+
+  renderer.domElement.addEventListener('pointerdown', (e)=>{ downPos = { x:e.clientX, y:e.clientY }; });
+  renderer.domElement.addEventListener('pointerup', (e)=>{
+    if(!downPos) return;
+    const moved = Math.hypot(e.clientX-downPos.x, e.clientY-downPos.y);
+    downPos = null;
+    if(moved > 6) return; // was a camera drag, not a click
+    handleClick(e);
+  });
+
+  function handleClick(e){
+    if(busy) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((e.clientX-rect.left)/rect.width)*2 - 1;
+    mouse.y = -((e.clientY-rect.top)/rect.height)*2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+
+    const targets = [ ...nodes.map(n=>n.mesh.group), ...survivors.map(s=>s.mesh.group) ];
+    const hits = raycaster.intersectObjects(targets, true);
+    if(hits.length){
+      let obj = hits[0].object;
+      while(obj && !obj.userData.kind) obj = obj.parent;
+      if(obj && obj.userData.kind==='node'){
+        if(mode==='kill') killNode(obj.userData.id);
+        return;
+      }
+      if(obj && obj.userData.kind==='survivor'){
+        selectSurvivor(obj.userData.id);
+        return;
+      }
+    }
+
+    if(!mode || mode==='kill') return;
+    const gHits = raycaster.intersectObject(ground);
+    if(!gHits.length) return;
+    const p = gHits[0].point;
+    const x2d = p.x + 450, y2d = p.z + 300;
+    if(x2d<0 || x2d>900 || y2d<0 || y2d>600) return;
+    if(mode==='addNode') addNode(x2d, y2d, true);
+    else if(mode==='survivor') placeSurvivor(x2d, y2d);
+    else if(mode==='rescue') placeRescue(x2d, y2d);
+  }
+
+  btnSend.addEventListener('click', ()=> trySend(msgInput.value.trim()));
+  msgInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') trySend(msgInput.value.trim()); });
+
+  btnReset.addEventListener('click', ()=>{
+    if(busy) return;
+    nodes.forEach(n=>{ scene.remove(n.mesh.group); scene.remove(n.label.sprite); });
+    survivors.forEach(s=>{ scene.remove(s.mesh.group); scene.remove(s.label.sprite); });
+    if(rescue){ scene.remove(rescue.mesh.group); scene.remove(rescue.label.sprite); }
+    nodes=[]; nextId=1; survivors=[]; nextSurvivorId=1; selectedSurvivorId=null; rescue=null; pending=[];
+    mode = null;
+    [btnAddNode,btnSurvivor,btnRescue,btnKill].forEach(b=>b.classList.remove('active'));
+    container.classList.remove('mode-active'); mapHint.classList.remove('show');
+    edgeGroup.clear(); wifiGroup.clear();
+    logFeed.innerHTML = '';
+    log('Simulation reset.', 'info');
+    updateAll();
+  });
+
+  log('System ready. Deploy a node sweep to begin.', 'info');
+  updateAll();
+})();
+</script>
+</body>
+</html>
