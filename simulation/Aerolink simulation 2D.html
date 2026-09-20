@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MESHRELAY — Disaster Response Network Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0a0f0d;
+    --panel: #101613;
+    --panel-2: #141c18;
+    --border: #223029;
+    --border-soft: #1a241f;
+    --text: #e8f2ec;
+    --muted: #7c9187;
+    --muted-2: #56675f;
+    --signal: #ffb238;
+    --signal-dim: #6b4f1c;
+    --mesh: #35e0a4;
+    --mesh-dim: #163d30;
+    --wifi: #4fd7ff;
+    --survivor: #ff5f57;
+    --rescue: #4f9dff;
+    --dead: #4a544e;
+    --danger: #ff5f57;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app{
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 18px;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .brand-eyebrow{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2.5px;
+    color: var(--signal);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  h1{
+    margin:0;
+    font-family:'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+  }
+  h1 span{ color: var(--muted); font-weight:500; }
+  .subtitle{
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+    max-width: 560px;
+    line-height: 1.5;
+  }
+
+  .status-strip{
+    display:flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .status-chip{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 3px;
+    padding: 7px 10px;
+    min-width: 108px;
+    text-align:left;
+  }
+  .status-chip .label{ color: var(--muted-2); letter-spacing: 1px; display:block; font-size:9.5px; margin-bottom:3px;}
+  .status-chip .val{ color: var(--text); font-weight:600; font-size: 13px;}
+  .status-chip .val.ok{ color: var(--mesh); }
+  .status-chip .val.warn{ color: var(--signal); }
+  .status-chip .val.bad{ color: var(--danger); }
+
+  /* ---------- layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 336px;
+    gap: 16px;
+  }
+  @media (max-width: 860px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .map-panel{
+    background: radial-gradient(ellipse at 30% 20%, #0e1512 0%, #090d0b 70%);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 900/600;
+  }
+  .map-panel svg{ width:100%; height:100%; display:block; cursor: default; }
+  .map-panel.mode-active svg{ cursor: crosshair; }
+
+  .map-hint{
+    position:absolute;
+    top:10px; left:10px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 1px;
+    color: var(--signal);
+    background: rgba(10,15,13,0.75);
+    border: 1px solid var(--signal-dim);
+    padding: 5px 9px;
+    border-radius: 3px;
+    display:none;
+    pointer-events:none;
+  }
+  .map-hint.show{ display:block; }
+
+  /* ---------- sidebar ---------- */
+  .sidebar{ display:flex; flex-direction:column; gap:12px; }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .panel h2{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 10px 0;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .panel h2::before{
+    content:"";
+    width:6px; height:6px;
+    background: var(--mesh);
+    border-radius:1px;
+    display:inline-block;
+  }
+
+  .btn-grid{ display:flex; flex-direction:column; gap:7px; }
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    padding: 9px 12px;
+    cursor: pointer;
+    text-align:left;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    transition: border-color .15s, background .15s;
+  }
+  button:hover{ border-color: var(--muted-2); background:#182019; }
+  button.active{
+    border-color: var(--signal);
+    background: rgba(255,178,56,0.10);
+    color: var(--signal);
+  }
+  button.primary{
+    background: var(--signal);
+    color: #1a1305;
+    border-color: var(--signal);
+    font-weight: 600;
+  }
+  button.primary:hover{ background:#ffbf5c; }
+  button.danger-mode.active{
+    border-color: var(--danger);
+    background: rgba(255,95,87,0.10);
+    color: var(--danger);
+  }
+  button:disabled{ opacity:0.4; cursor:not-allowed; }
+  button .kbd{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--muted-2);
+  }
+
+  .msg-row{ display:flex; gap:6px; margin-top:2px; }
+  .msg-row input{
+    flex:1;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    padding: 8px 9px;
+    border-radius: 4px;
+    min-width: 0;
+  }
+  .msg-row input:focus{ outline:none; border-color: var(--mesh); }
+  .msg-row button{ flex-shrink:0; }
+
+  /* legend */
+  .legend-item{
+    display:flex; align-items:center; gap:9px;
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 4px 0;
+  }
+  .legend-swatch{ width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+  .legend-line{ width:16px; height:2px; flex-shrink:0; }
+
+  /* survivor roster */
+  .roster{ display:flex; flex-direction:column; gap:5px; }
+  .roster-empty{ font-size: 11.5px; color: var(--muted-2); font-style:italic; }
+  .roster-row{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px;
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    padding: 7px 9px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    cursor: pointer;
+  }
+  .roster-row:hover{ border-color: var(--muted-2); }
+  .roster-row.selected{
+    border-color: var(--survivor);
+    background: rgba(255,95,87,0.10);
+  }
+  .roster-row .r-id{ color: var(--text); font-weight:600; }
+  .roster-row .r-status{ font-size: 10px; letter-spacing: 0.5px; }
+  .roster-row .r-status.ok{ color: var(--mesh); }
+  .roster-row .r-status.bad{ color: var(--muted-2); }
+  .roster-row.dead-owner .r-id{ color: var(--muted-2); text-decoration: line-through; }
+
+  .note{
+    font-size: 11px;
+    color: var(--muted-2);
+    line-height: 1.55;
+    margin-top: 8px;
+    border-top: 1px solid var(--border-soft);
+    padding-top: 9px;
+  }
+
+  /* log */
+  .log-panel{ flex:1; display:flex; flex-direction:column; min-height: 180px; }
+  .log-feed{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    overflow-y: auto;
+    max-height: 220px;
+    padding-right: 4px;
+  }
+  .log-feed::-webkit-scrollbar{ width:5px; }
+  .log-feed::-webkit-scrollbar-thumb{ background: var(--border); border-radius:3px; }
+  .log-line{ display:flex; gap:7px; margin-bottom:2px; }
+  .log-time{ color: var(--muted-2); flex-shrink:0; }
+  .log-text.info{ color: var(--muted); }
+  .log-text.ok{ color: var(--mesh); }
+  .log-text.warn{ color: var(--signal); }
+  .log-text.bad{ color: var(--danger); }
+
+  /* svg elements */
+  .grid-line{ stroke: #16201b; stroke-width:1; }
+  .edge{ stroke: var(--mesh); stroke-width: 1.6; opacity:0.55; }
+  .edge-dead{ stroke: var(--dead); stroke-width: 1; opacity:0.35; stroke-dasharray: 3 4; }
+  .wifi-link{ stroke: var(--wifi); stroke-width: 1.4; stroke-dasharray: 2 4; opacity:0.7; }
+  .route-edge{ stroke: var(--signal); stroke-width: 3; opacity: 0.9; }
+
+  .node-circle{ fill: #0d1613; stroke: var(--mesh); stroke-width: 2; }
+  .node-glow{ fill: var(--mesh); opacity: 0.14; }
+  .node-dead .node-circle{ stroke: var(--dead); }
+  .node-dead .node-glow{ fill: var(--dead); opacity:0.08; }
+  .node-label{ font-family:'JetBrains Mono', monospace; font-size: 8.5px; fill: var(--muted); }
+  .range-ring{ fill:none; stroke: var(--mesh); stroke-width:1; stroke-dasharray: 2 5; opacity:0; transition: opacity .15s; pointer-events:none; }
+  .node-group:hover .range-ring{ opacity: 0.35; }
+  .node-group{ cursor: pointer; }
+
+  .drone{ pointer-events:none; }
+  .drone-body{ fill: var(--signal); }
+  .drone-glow{ fill: var(--signal); opacity:0.2; }
+
+  .marker-label{ font-family:'JetBrains Mono', monospace; font-size: 9px; fill: var(--text); }
+  .marker-group{ cursor:pointer; }
+  .select-ring{
+    fill:none; stroke: var(--signal); stroke-width:1.4; stroke-dasharray: 3 3;
+  }
+
+  .pulse-ring{
+    fill:none; stroke: var(--signal); stroke-width:2;
+    transform-origin: center;
+    animation: pulseOut 0.9s ease-out forwards;
+  }
+  @keyframes pulseOut{
+    from{ opacity:0.9; r:10; }
+    to{ opacity:0; r:34; }
+  }
+
+  .packet{ fill: var(--signal); filter: drop-shadow(0 0 5px var(--signal)); }
+
+  footer{
+    margin-top: 14px;
+    text-align:center;
+    font-size: 10.5px;
+    color: var(--muted-2);
+    font-family:'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div>
+      <div class="brand-eyebrow">FIELD OPS · PROTOTYPE SIMULATION</div>
+      <h1>MESHRELAY <span>// disaster response network</span></h1>
+      <div class="subtitle">A drone scatters relay nodes over the affected area. Nodes auto-link into a self-healing mesh over long-range radio; survivors reach the nearest node over its local WiFi hotspot — no app, no signup.</div>
+    </div>
+    <div class="status-strip" id="statusStrip"></div>
+  </header>
+
+  <div class="layout">
+
+    <div class="map-panel" id="mapPanel">
+      <div class="map-hint" id="mapHint"></div>
+      <svg id="svg" viewBox="0 0 900 600" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+
+    <div class="sidebar">
+
+      <div class="panel">
+        <h2>Deployment</h2>
+        <div class="btn-grid">
+          <button class="primary" id="btnSweep">Deploy Node Sweep <span class="kbd">drone drop</span></button>
+          <button id="btnAddNode">+ Place Node <span class="kbd">manual</span></button>
+          <button id="btnSurvivor">+ Place Survivor <span class="kbd">phone</span></button>
+          <button id="btnRescue">Place Rescue HQ <span class="kbd">base</span></button>
+          <button id="btnKill" class="danger-mode">Disable Node <span class="kbd">simulate damage</span></button>
+          <button id="btnReset">Reset Simulation</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Survivors <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted-2)">(tap to select sender)</span></h2>
+        <div class="roster" id="roster">
+          <div class="roster-empty">No survivors placed yet.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Send Message</h2>
+        <div class="msg-row">
+          <input id="msgInput" type="text" placeholder="Need medical help, 3 injured" maxlength="60">
+          <button class="primary" id="btnSend">Send</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Legend</h2>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--mesh)"></span> Active relay node</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--dead)"></span> Disabled / damaged node</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--survivor)"></span> Survivor phone</div>
+        <div class="legend-item"><span class="legend-swatch" style="background:var(--rescue)"></span> Rescue HQ</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--mesh)"></span> Mesh radio link (node ⇄ node)</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--wifi)"></span> WiFi hop (phone ⇄ node)</div>
+        <div class="legend-item"><span class="legend-line" style="background:var(--signal)"></span> Live message route</div>
+        <div class="note">Mesh links use long-range radio between nodes. Each node also runs a local WiFi AP so any phone can join directly — that's the last hop to a survivor.</div>
+      </div>
+
+      <div class="panel log-panel">
+        <h2>Event Log</h2>
+        <div class="log-feed" id="logFeed"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>PROTOTYPE — SIMULATED RADIO RANGE, NOT LIVE TELEMETRY</footer>
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('svg');
+  const svgNS = "http://www.w3.org/2000/svg";
+  const mapPanel = document.getElementById('mapPanel');
+  const mapHint = document.getElementById('mapHint');
+  const logFeed = document.getElementById('logFeed');
+  const statusStrip = document.getElementById('statusStrip');
+
+  const MESH_RANGE = 205;   // node-to-node long range radio
+  const WIFI_RANGE = 95;    // phone-to-node local wifi
+
+  let nodes = [];           // {id,x,y,alive}
+  let nextId = 1;
+  let survivors = [];       // [{id,x,y,connectedId}]
+  let nextSurvivorId = 1;
+  let selectedSurvivorId = null;
+  let rescue = null;        // {x,y,connectedId}
+  let mode = null;          // 'addNode' | 'survivor' | 'rescue' | 'kill'
+  let pending = [];         // queued messages awaiting a route: {id,text,survivorId,notified}
+  let busy = false;         // true while sweep/message animating
+
+  function getSelectedSurvivor(){
+    return survivors.find(s=>s.id===selectedSurvivorId) || null;
+  }
+  function selectSurvivor(id){
+    selectedSurvivorId = id;
+    render();
+  }
+
+  const layers = {};
+  ['grid','ranges','edges','wifi','route','nodes','markers','fx'].forEach(name=>{
+    const g = document.createElementNS(svgNS,'g');
+    g.setAttribute('data-layer', name);
+    svg.appendChild(g);
+    layers[name] = g;
+  });
+
+  function el(tag, attrs){
+    const e = document.createElementNS(svgNS, tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+
+  function nowStamp(){
+    const d = new Date();
+    return d.toTimeString().slice(0,8);
+  }
+
+  function log(text, level){
+    level = level || 'info';
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.innerHTML = `<span class="log-time">${nowStamp()}</span><span class="log-text ${level}">${text}</span>`;
+    logFeed.appendChild(line);
+    logFeed.scrollTop = logFeed.scrollHeight;
+  }
+
+  /* ---------------- static grid ---------------- */
+  function drawGrid(){
+    layers.grid.innerHTML = '';
+    for(let x=0;x<=900;x+=60){
+      layers.grid.appendChild(el('line',{x1:x,y1:0,x2:x,y2:600,class:'grid-line'}));
+    }
+    for(let y=0;y<=600;y+=60){
+      layers.grid.appendChild(el('line',{x1:0,y1:y,x2:900,y2:y,class:'grid-line'}));
+    }
+  }
+  drawGrid();
+
+  /* ---------------- graph helpers ---------------- */
+  function aliveNodes(){ return nodes.filter(n=>n.alive); }
+
+  function computeEdges(){
+    const alive = aliveNodes();
+    const edges = [];
+    for(let i=0;i<alive.length;i++){
+      for(let j=i+1;j<alive.length;j++){
+        if(dist(alive[i],alive[j]) <= MESH_RANGE){
+          edges.push([alive[i].id, alive[j].id]);
+        }
+      }
+    }
+    return edges;
+  }
+
+  function nearestAlive(pt, range){
+    let best = null, bestD = Infinity;
+    aliveNodes().forEach(n=>{
+      const d = dist(pt,n);
+      if(d <= range && d < bestD){ bestD = d; best = n; }
+    });
+    return best;
+  }
+
+  function buildAdjacency(edges){
+    const adj = {};
+    aliveNodes().forEach(n=> adj[n.id] = []);
+    edges.forEach(([a,b])=>{
+      adj[a].push(b); adj[b].push(a);
+    });
+    return adj;
+  }
+
+  function bfsPath(adj, startId, endId){
+    if(startId === endId) return [startId];
+    const visited = new Set([startId]);
+    const queue = [[startId]];
+    while(queue.length){
+      const path = queue.shift();
+      const last = path[path.length-1];
+      for(const nb of (adj[last]||[])){
+        if(!visited.has(nb)){
+          visited.add(nb);
+          const np = [...path, nb];
+          if(nb === endId) return np;
+          queue.push(np);
+        }
+      }
+    }
+    return null;
+  }
+
+  function nodeById(id){ return nodes.find(n=>n.id===id); }
+
+  /* ---------------- render ---------------- */
+  function render(){
+    const edges = computeEdges();
+
+    // mesh edges
+    layers.edges.innerHTML = '';
+    edges.forEach(([a,b])=>{
+      const A = nodeById(a), B = nodeById(b);
+      layers.edges.appendChild(el('line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,class:'edge'}));
+    });
+
+    // wifi links
+    layers.wifi.innerHTML = '';
+    survivors.forEach(surv=>{
+      const near = nearestAlive(surv, WIFI_RANGE);
+      surv.connectedId = near ? near.id : null;
+      if(near) layers.wifi.appendChild(el('line',{x1:surv.x,y1:surv.y,x2:near.x,y2:near.y,class:'wifi-link'}));
+    });
+    if(rescue){
+      const near = nearestAlive(rescue, WIFI_RANGE);
+      rescue.connectedId = near ? near.id : null;
+      if(near) layers.wifi.appendChild(el('line',{x1:rescue.x,y1:rescue.y,x2:near.x,y2:near.y,class:'wifi-link'}));
+    }
+
+    // nodes
+    layers.nodes.innerHTML = '';
+    nodes.forEach(n=>{
+      const g = el('g',{class:'node-group' + (n.alive?'':' node-dead'), 'data-id':n.id});
+      g.appendChild(el('circle',{cx:n.x,cy:n.y,r:MESH_RANGE,class:'range-ring'}));
+      g.appendChild(el('circle',{cx:n.x,cy:n.y,r:16,class:'node-glow'}));
+      g.appendChild(el('circle',{cx:n.x,cy:n.y,r:8,class:'node-circle'}));
+      if(!n.alive){
+        g.appendChild(el('line',{x1:n.x-5,y1:n.y-5,x2:n.x+5,y2:n.y+5,stroke:'#8b968f','stroke-width':1.4}));
+        g.appendChild(el('line',{x1:n.x-5,y1:n.y+5,x2:n.x+5,y2:n.y-5,stroke:'#8b968f','stroke-width':1.4}));
+      }
+      g.appendChild(el('text',{x:n.x, y:n.y-14, 'text-anchor':'middle', class:'node-label'})).textContent = 'N'+n.id;
+      g.addEventListener('click', (ev)=>{ ev.stopPropagation(); onNodeClick(n); });
+      layers.nodes.appendChild(g);
+    });
+
+    // markers
+    layers.markers.innerHTML = '';
+    survivors.forEach(surv=>{
+      const linked = !!surv.connectedId;
+      const selected = surv.id === selectedSurvivorId;
+      const g = el('g',{class:'marker-group', 'data-survivor-id':surv.id});
+      if(selected) g.appendChild(el('circle',{cx:surv.x,cy:surv.y,r:16,class:'select-ring'}));
+      g.appendChild(el('circle',{cx:surv.x,cy:surv.y,r:14,fill:'var(--survivor)',opacity:0.15}));
+      g.appendChild(el('rect',{x:surv.x-6,y:surv.y-6,width:12,height:12,rx:3,fill:'var(--survivor)',transform:`rotate(45 ${surv.x} ${surv.y})`}));
+      g.appendChild(el('text',{x:surv.x, y:surv.y+24, 'text-anchor':'middle', class:'marker-label'})).textContent = `S${surv.id} · ${linked ? 'LINKED' : 'SEARCHING'}`;
+      g.addEventListener('click', (ev)=>{ ev.stopPropagation(); selectSurvivor(surv.id); });
+      layers.markers.appendChild(g);
+    });
+    if(rescue){
+      const linked = !!rescue.connectedId;
+      const g = el('g',{});
+      g.appendChild(el('circle',{cx:rescue.x,cy:rescue.y,r:15,fill:'var(--rescue)',opacity:0.15}));
+      g.appendChild(el('polygon',{points: hexPoints(rescue.x,rescue.y,8), fill:'var(--rescue)'}));
+      g.appendChild(el('text',{x:rescue.x, y:rescue.y+24, 'text-anchor':'middle', class:'marker-label'})).textContent = linked ? 'RESCUE HQ · LINKED' : 'RESCUE HQ · SEARCHING';
+      layers.markers.appendChild(g);
+    }
+
+    updateStatus(edges);
+    renderRoster();
+  }
+
+  function renderRoster(){
+    const roster = document.getElementById('roster');
+    if(survivors.length === 0){
+      roster.innerHTML = '<div class="roster-empty">No survivors placed yet.</div>';
+      return;
+    }
+    roster.innerHTML = '';
+    survivors.forEach(surv=>{
+      const row = document.createElement('div');
+      row.className = 'roster-row' + (surv.id===selectedSurvivorId ? ' selected' : '');
+      const linked = !!surv.connectedId;
+      row.innerHTML = `<span class="r-id">${surv.id===selectedSurvivorId?'● ':''}S${surv.id}</span><span class="r-status ${linked?'ok':'bad'}">${linked?'LINKED':'SEARCHING'}</span>`;
+      row.addEventListener('click', ()=> selectSurvivor(surv.id));
+      roster.appendChild(row);
+    });
+  }
+
+  function hexPoints(cx,cy,r){
+    let pts = [];
+    for(let i=0;i<6;i++){
+      const a = Math.PI/180 * (60*i - 90);
+      pts.push((cx+r*Math.cos(a)).toFixed(1)+','+(cy+r*Math.sin(a)).toFixed(1));
+    }
+    return pts.join(' ');
+  }
+
+  function updateStatus(edges){
+    const alive = aliveNodes().length;
+    const total = nodes.length;
+    const survLinked = survivors.filter(s=>s.connectedId).length;
+    const rescStatus = !rescue ? 'UNPLACED' : (rescue.connectedId ? 'LINKED' : 'SEARCHING');
+    statusStrip.innerHTML = `
+      <div class="status-chip"><span class="label">NODES</span><span class="val ${alive<total?'warn':'ok'}">${alive}/${total} ALIVE</span></div>
+      <div class="status-chip"><span class="label">MESH LINKS</span><span class="val ok">${edges.length}</span></div>
+      <div class="status-chip"><span class="label">SURVIVORS</span><span class="val ${survivors.length && survLinked<survivors.length?'warn':(survivors.length?'ok':'')}">${survLinked}/${survivors.length} LINKED</span></div>
+      <div class="status-chip"><span class="label">RESCUE HQ</span><span class="val ${rescStatus==='LINKED'?'ok':(rescStatus==='SEARCHING'?'bad':'')}">${rescStatus}</span></div>
+      <div class="status-chip"><span class="label">QUEUED MSG</span><span class="val ${pending.length? 'warn':''}">${pending.length}</span></div>
+    `;
+  }
+
+  /* ---------------- mode / interaction ---------------- */
+  const btnSweep = document.getElementById('btnSweep');
+  const btnAddNode = document.getElementById('btnAddNode');
+  const btnSurvivor = document.getElementById('btnSurvivor');
+  const btnRescue = document.getElementById('btnRescue');
+  const btnKill = document.getElementById('btnKill');
+  const btnReset = document.getElementById('btnReset');
+  const btnSend = document.getElementById('btnSend');
+  const msgInput = document.getElementById('msgInput');
+
+  function setMode(m){
+    mode = (mode === m) ? null : m;
+    [btnAddNode,btnSurvivor,btnRescue,btnKill].forEach(b=>b.classList.remove('active'));
+    mapPanel.classList.remove('mode-active');
+    mapHint.classList.remove('show');
+    if(mode === 'addNode'){ btnAddNode.classList.add('active'); mapPanel.classList.add('mode-active'); mapHint.textContent='CLICK MAP TO DEPLOY NODE'; mapHint.classList.add('show'); }
+    if(mode === 'survivor'){ btnSurvivor.classList.add('active'); mapPanel.classList.add('mode-active'); mapHint.textContent='CLICK MAP TO ADD A SURVIVOR (repeatable)'; mapHint.classList.add('show'); }
+    if(mode === 'rescue'){ btnRescue.classList.add('active'); mapPanel.classList.add('mode-active'); mapHint.textContent='CLICK MAP TO PLACE RESCUE HQ'; mapHint.classList.add('show'); }
+    if(mode === 'kill'){ btnKill.classList.add('active'); mapPanel.classList.add('mode-active'); mapHint.textContent='CLICK A NODE TO DISABLE IT'; mapHint.classList.add('show'); }
+  }
+
+  btnAddNode.addEventListener('click', ()=> setMode('addNode'));
+  btnSurvivor.addEventListener('click', ()=> setMode('survivor'));
+  btnRescue.addEventListener('click', ()=> setMode('rescue'));
+  btnKill.addEventListener('click', ()=> setMode('kill'));
+
+  function svgPointFromEvent(ev){
+    const rect = svg.getBoundingClientRect();
+    const x = (ev.clientX - rect.left) / rect.width * 900;
+    const y = (ev.clientY - rect.top) / rect.height * 600;
+    return {x,y};
+  }
+
+  svg.addEventListener('click', (ev)=>{
+    if(busy) return;
+    if(!mode) return;
+    const pt = svgPointFromEvent(ev);
+    if(mode === 'addNode'){
+      addNode(pt.x, pt.y, true);
+    } else if(mode === 'survivor'){
+      const s = { id: nextSurvivorId++, x: pt.x, y: pt.y, connectedId: null };
+      survivors.push(s);
+      selectedSurvivorId = s.id;
+      log(`Survivor S${s.id} placed on map — set as active sender.`, 'info');
+      render();
+      attemptFlushPending();
+    } else if(mode === 'rescue'){
+      rescue = { x: pt.x, y: pt.y, connectedId: null };
+      log('Rescue HQ established.', 'info');
+      render();
+      attemptFlushPending();
+    }
+  });
+
+  function onNodeClick(n){
+    if(busy) return;
+    if(mode === 'kill'){
+      if(!n.alive) return;
+      n.alive = false;
+      log(`NODE N${n.id} OFFLINE — link lost, simulating field damage.`, 'bad');
+      log('SELF-HEALING: recalculating mesh topology…', 'warn');
+      render();
+      setTimeout(()=>{ attemptFlushPending(); }, 500);
+    }
+  }
+
+  /* ---------------- deployment ---------------- */
+  function addNode(x,y,manual){
+    const n = { id: nextId++, x, y, alive:true };
+    nodes.push(n);
+    spawnPulse(x,y);
+    render();
+    if(manual) log(`NODE N${n.id} deployed manually at (${x.toFixed(0)}, ${y.toFixed(0)}).`, 'ok');
+    attemptFlushPending();
+    return n;
+  }
+
+  function spawnPulse(x,y){
+    const ring = el('circle',{cx:x,cy:y,r:10,class:'pulse-ring'});
+    layers.fx.appendChild(ring);
+    setTimeout(()=> ring.remove(), 950);
+  }
+
+  const dropPoints = [
+    {x:120,y:140},{x:270,y:190},{x:410,y:120},{x:560,y:175},{x:700,y:130},
+    {x:680,y:300},{x:540,y:350},{x:390,y:300},{x:240,y:360},{x:140,y:290}
+  ];
+
+  function jitter(v, amt){ return v + (Math.random()*amt*2 - amt); }
+
+  btnSweep.addEventListener('click', async ()=>{
+    if(busy) return;
+    busy = true;
+    btnSweep.disabled = true;
+    log('Drone launched — beginning node deployment sweep.', 'ok');
+
+    const drone = el('g',{class:'drone'});
+    drone.appendChild(el('circle',{cx:0,cy:0,r:12,class:'drone-glow'}));
+    drone.appendChild(el('polygon',{points:'-8,6 8,6 0,-9', class:'drone-body'}));
+    drone.setAttribute('transform', `translate(${dropPoints[0].x-40}, ${dropPoints[0].y-40})`);
+    drone.style.transition = 'transform 0.5s ease-in-out';
+    layers.fx.appendChild(drone);
+
+    await sleep(150);
+
+    for(let i=0;i<dropPoints.length;i++){
+      const p = dropPoints[i];
+      drone.setAttribute('transform', `translate(${p.x}, ${p.y - 34})`);
+      await sleep(480);
+      const nx = jitter(p.x, 10), ny = jitter(p.y, 10);
+      addNode(nx, ny, false);
+      log(`NODE N${nextId-1} deployed — establishing radio links…`, 'ok');
+      await sleep(170);
+    }
+
+    await sleep(200);
+    drone.remove();
+    const edgeCount = computeEdges().length;
+    log(`Sweep complete — ${dropPoints.length} nodes online, ${edgeCount} mesh links formed.`, 'ok');
+    busy = false;
+    btnSweep.disabled = false;
+    attemptFlushPending();
+  });
+
+  function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+  /* ---------------- messaging ---------------- */
+  let msgCounter = 1;
+
+  btnSend.addEventListener('click', ()=> trySend(msgInput.value.trim()));
+  msgInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') trySend(msgInput.value.trim()); });
+
+  function trySend(text){
+    if(busy) return;
+    if(!text) text = 'Need assistance — location marked.';
+    if(survivors.length===0){ log('Cannot send — place a survivor on the map first.', 'bad'); return; }
+    const surv = getSelectedSurvivor();
+    if(!surv){ log('Cannot send — select a survivor from the roster first.', 'bad'); return; }
+    if(!rescue){ log('Cannot send — place a Rescue HQ on the map first.', 'bad'); return; }
+    if(!surv.connectedId){ log(`NO SIGNAL — S${surv.id} is out of WiFi range of any node. Message queued.`, 'warn'); }
+
+    const id = msgCounter++;
+    log(`MSG-${id} queued from S${surv.id}: "${text}"`, 'info');
+    pending.push({ id, text, survivorId: surv.id, notified:false });
+    msgInput.value = '';
+    attemptFlushPending();
+  }
+
+  async function attemptFlushPending(){
+    if(busy || pending.length===0) return;
+    const adj = buildAdjacency(computeEdges());
+    for(let i=0;i<pending.length;i++){
+      const msg = pending[i];
+      const surv = survivors.find(s=>s.id===msg.survivorId);
+      if(!surv || !surv.connectedId || !rescue || !rescue.connectedId){
+        if(!msg.notified){ log(`MSG-${msg.id} (S${msg.survivorId}) — no route yet, holding for store-and-forward.`, 'warn'); msg.notified = true; }
+        continue;
+      }
+      const path = bfsPath(adj, surv.connectedId, rescue.connectedId);
+      if(!path){
+        if(!msg.notified){ log(`MSG-${msg.id} (S${msg.survivorId}) — mesh partitioned, holding for store-and-forward.`, 'warn'); msg.notified = true; }
+        continue;
+      }
+      pending.splice(i,1);
+      await animateRoute(surv, path, msg);
+      attemptFlushPending();
+      return;
+    }
+  }
+
+  async function animateRoute(surv, nodeIdPath, msg){
+    busy = true;
+    const fullPoints = [surv, ...nodeIdPath.map(nodeById), rescue];
+    log(`MSG-${msg.id} routing: S${surv.id} → ${nodeIdPath.map(id=>'N'+id).join(' → ')} → RESCUE HQ`, 'info');
+
+    layers.route.innerHTML = '';
+    for(let i=0;i<fullPoints.length-1;i++){
+      const A = fullPoints[i], B = fullPoints[i+1];
+      layers.route.appendChild(el('line',{x1:A.x,y1:A.y,x2:B.x,y2:B.y,class:'route-edge'}));
+    }
+
+    const packet = el('circle',{cx:fullPoints[0].x, cy:fullPoints[0].y, r:5, class:'packet'});
+    layers.fx.appendChild(packet);
+
+    const hopMs = 260;
+    for(let i=0;i<fullPoints.length-1;i++){
+      const A = fullPoints[i], B = fullPoints[i+1];
+      await animatePoint(packet, A, B, hopMs);
+      if(i < fullPoints.length-2){
+        spawnPulse(B.x, B.y);
+      }
+    }
+
+    packet.remove();
+    layers.route.innerHTML = '';
+    const hops = nodeIdPath.length;
+    const etaSec = ((fullPoints.length-1)*hopMs/1000).toFixed(1);
+    log(`MSG-${msg.id} DELIVERED to Rescue HQ — ${hops} relay hop(s), ~${etaSec}s.`, 'ok');
+    busy = false;
+  }
+
+  function animatePoint(node, from, to, duration){
+    return new Promise(resolve=>{
+      const start = performance.now();
+      function step(t){
+        const p = Math.min(1, (t-start)/duration);
+        node.setAttribute('cx', from.x + (to.x-from.x)*p);
+        node.setAttribute('cy', from.y + (to.y-from.y)*p);
+        if(p<1) requestAnimationFrame(step);
+        else resolve();
+      }
+      requestAnimationFrame(step);
+    });
+  }
+
+  /* ---------------- reset ---------------- */
+  btnReset.addEventListener('click', ()=>{
+    if(busy) return;
+    nodes = []; nextId = 1; survivors = []; nextSurvivorId = 1; selectedSurvivorId = null; rescue = null; pending = [];
+    mode = null;
+    [btnAddNode,btnSurvivor,btnRescue,btnKill].forEach(b=>b.classList.remove('active'));
+    mapPanel.classList.remove('mode-active');
+    mapHint.classList.remove('show');
+    layers.route.innerHTML = ''; layers.fx.innerHTML = '';
+    logFeed.innerHTML = '';
+    log('Simulation reset.', 'info');
+    render();
+  });
+
+  log('System ready. Deploy a node sweep to begin.', 'info');
+  render();
+})();
+</script>
+</body>
+</html>
