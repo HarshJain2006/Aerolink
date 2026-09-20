@@ -33,6 +33,8 @@ After deployment, these nodes form a **multi-hop wireless mesh network**, allowi
 
 The UAV is primarily used for **rapid deployment of communication infrastructure**, while the deployed ground nodes provide persistent communication after landing.
 
+> **Final architecture note:** The final project document specifies an ESP32-based ground node with LoRa communication, an SOS push button, local Wi-Fi/BLE access, and a command-center stack based on React.js, Node.js + Express.js, Firebase, OpenStreetMap, and WebSocket. Earlier firmware versions in this repository are prototype stages toward this architecture.
+
 ---
 
 # 🎯 Problem Statement
@@ -71,7 +73,7 @@ Central Monitoring Dashboard
 
 The UAV surveys the affected area and reaches a suitable deployment location.
 
-A communication node is then released using a **parachute-assisted deployment mechanism**, allowing the UAV to release the payload without landing.
+A communication node is then released using a **deployment mechanism-assisted deployment mechanism**, allowing the UAV to release the payload without landing.
 
 The node lands inside a protective deployment enclosure, initializes, and joins the existing ground mesh network.
 
@@ -159,7 +161,7 @@ Navigate to Location
 Release Communication Node
   │
   ▼
-Parachute-Assisted Descent
+Controlled Deployment-Assisted Descent
   │
   ▼
 Node Lands
@@ -212,13 +214,13 @@ Maintains communication between the UAV, deployed nodes, and command system wher
 
 Releases the communication node at the selected location.
 
-The design uses **parachute-assisted delivery**, allowing the UAV to release the node without landing.
+The design uses **controlled node deployment**, allowing the UAV to release the node without landing.
 
 ---
 
-# 🪂 Parachute-Assisted Deployment
+# 🪂 UAV-Based Controlled Node Deployment
 
-AeroLink uses a parachute-assisted mechanism to reduce the risk associated with direct payload dropping.
+AeroLink uses a controlled payload deployment mechanism to reduce the risk associated with direct payload dropping.
 
 The basic process is:
 
@@ -229,7 +231,7 @@ UAV reaches deployment location
 Communication node released
           │
           ▼
-Parachute deploys
+Controlled Deployment deploys
           │
           ▼
 Descent velocity reduced
@@ -321,44 +323,41 @@ This enables communication across a larger area using multiple deployed nodes.
 
 ---
 
-# 📶 Current Networking Architecture
+# 📶 Networking Architecture
 
-The **current ESP32 ground-node prototype uses a Wi-Fi-based `painlessMesh` architecture**.
-
-It is important to distinguish the current implementation from future networking work.
+The final AeroLink architecture uses a **ground-node multi-hop communication network**. Each deployed node discovers nearby nodes and forwards emergency packets toward the command center. The final technical approach includes **LoRa-based long-range, low-power communication** for the ground communication system.
 
 ```text
-Survivor Device
-      │
-      │ Wi-Fi
-      ▼
-ESP32 Ground Node
-      │
-      │ painlessMesh
-      │
-      ▼
-Other ESP32 Ground Nodes
-      │
-      │ Multi-hop communication
-      ▼
-Rescue / Command Interface
+Victim / Rescuer
+       │
+       ▼
+Ground Node A
+       │
+       ▼
+Ground Node B
+       │
+       ▼
+Ground Node C
+       │
+       ▼
+Command Center
 ```
 
-### Current communication layers
+### Final communication concept
 
-| Connection | Technology | Purpose |
+| Connection | Technology / Layer | Purpose |
 |---|---|---|
-| Survivor → ESP32 | Wi-Fi | Submit emergency message |
-| ESP32 ↔ ESP32 | painlessMesh over Wi-Fi | Mesh communication and message propagation |
-| Rescue Device → ESP32 | Wi-Fi + HTTP/WebSocket | Dashboard monitoring |
+| Victim / Rescuer → Ground Node | Local Wi-Fi / BLE or SOS button | Submit or trigger emergency alert |
+| Ground Node ↔ Ground Node | Multi-hop mesh + LoRa communication layer | Forward emergency packets |
+| Ground Node → Command Center | Mesh backhaul / gateway path | Deliver alerts and node data |
+| Command Center | React.js + Node.js + Express.js + Firebase + WebSocket | Monitor and manage the network |
+| Map | OpenStreetMap | Display node locations |
 
-The current implementation does **not** use ESP-NOW.
+### Firmware prototype vs. final architecture
 
-### Future Networking Direction
+The repository contains earlier ESP32 firmware prototypes (V0.0 and V1.1) that were developed to validate the ground-node communication concept. The current prototype code uses the earlier Wi-Fi/painlessMesh approach, while the **final AeroLink architecture presented in the project document includes LoRa, the SOS push-button interface, and the full React/Node.js/Firebase/OpenStreetMap command-center stack**.
 
-A custom **ESP-NOW-based mesh architecture** is being investigated as a future development direction to improve the robustness and control of the ground-node communication layer.
-
----
+This distinction keeps the repository history clear: the firmware versions document the development path, while the final architecture describes the intended integrated AeroLink system.
 
 # 🆘 Emergency Communication
 
@@ -516,53 +515,41 @@ Future versions can extend this to:
 
 # 💻 Technology Stack
 
-## Embedded Hardware
+## 🚁 UAV Tech Stack
+
+- Flight Controller
+- GPS Module
+- Servo Motor for node-release mechanism
+- Companion Computer
+- Battery
+- ESC
+- BLDC Motors
+
+## 📦 Ground Node Tech Stack
 
 - ESP32
-- UAV platform
-- GPS module
-- Communication modules
-- Battery system
-- Deployment mechanism
+- Multi-hop mesh communication
+- LoRa communication technology
+- Li-ion battery
+- SOS push button
+- Local Wi-Fi interface
+- BLE interface
+- GPS / location support
 - Protective enclosure
 
-## Software
+## 🖥️ Dashboard Tech Stack
 
-- Arduino / C++
-- ESP32 firmware
-- Wi-Fi networking
-- painlessMesh
-- Web server
-- WebSocket communication
-- JSON-based messaging
+- React.js — frontend and user interface
+- Node.js + Express.js — backend and APIs
+- Firebase — node and emergency-data storage
+- OpenStreetMap — node-location visualization
+- WebSocket — real-time updates
 
-## Planned / Future Technologies
+## 🔧 Prototype Firmware Stack
 
-- ESP-NOW
-- GPS integration
-- Interactive mapping
-- Advanced routing
-- Secure communication
-- Network health monitoring
+The repository's current firmware-development versions contain ESP32-based prototype code used to validate the ground-node communication concept. The prototype includes Wi-Fi, painlessMesh, web-server, WebSocket, and JSON-based communication components.
 
----
-
-# 📚 Software Libraries
-
-The current ESP32 prototype uses libraries including:
-
-```cpp
-#include "painlessMesh.h"
-#include <WiFi.h>
-#include <DNSServer.h>
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncWebSocket.h>
-#include <ArduinoJson.h>
-#include "esp_wifi.h"
-```
-
----
+The prototype firmware should not be interpreted as the complete final hardware/software stack; the final architecture is described above.
 
 # 🧩 Core Software Architecture
 
@@ -656,6 +643,32 @@ Large Area
 Additional UAVs can also be used to deploy more nodes when required.
 
 This creates a scalable communication infrastructure for larger disaster-affected regions.
+
+---
+
+# 📏 Research & Reference Results
+
+The final project document references research and field results relevant to UAV communication and emergency mesh networking. These values are **reference results from external studies/prototypes, not AeroLink performance claims**.
+
+### Emergency mesh field prototype
+
+- **280 m** maximum hop distance using IEEE 802.11n
+- **290 m** maximum hop distance using IEEE 802.11ac
+- **220 m** hop distance under interference using IEEE 802.11n
+
+The referenced prototype involved **2 UAVs and 3 Raspberry Pi-based nodes**.
+
+### UAV communication field trial
+
+The project document also references a public-safety UAV communication field trial reporting:
+
+- **>1,000 m** UAV-based communication coverage
+- **<600 m** ground coverage in the same trial
+- **>50 Mbps** throughput below 300 m
+- **30 Mbps** at 900 m
+- **40–75 ms** typical RTT at approximately 350 m
+
+These measurements are included to provide research context and should not be treated as guaranteed AeroLink specifications.
 
 ---
 
@@ -912,7 +925,7 @@ The command center can monitor:
 
 UAVs can quickly transport communication nodes to affected locations.
 
-Parachute-assisted deployment allows the node to be released without requiring the UAV to land.
+Controlled Deployment-assisted deployment allows the node to be released without requiring the UAV to land.
 
 ---
 
@@ -977,7 +990,7 @@ Research focuses on:
 
 Research includes:
 
-- Parachute-assisted delivery
+- Controlled Deployment-assisted delivery
 - Payload protection
 - Center-of-gravity optimization
 - Landing stability
@@ -1285,28 +1298,63 @@ Rescue teams should be able to monitor the network without physically entering h
 
 ---
 
+# 📁 Repository Structure
+
+```text
+AeroLink/
+│
+├── README.md
+│
+├── V0.0/
+│   └── AeroLink_V0.0.ino
+│
+├── V1.1/
+│   └── AeroLink_V1.1.ino
+│
+├── Documentation/
+│   ├── Architecture/
+│   ├── Testing/
+│   └── Research/
+│
+├── Hardware/
+│   ├── Ground_Node/
+│   ├── UAV/
+│   └── Deployment_Mechanism/
+│
+└── Media/
+    ├── Images/
+    └── Demo/
+```
+
+> **Note:** This is the recommended organization for the repository. Folder names can be updated as the actual AeroLink repository evolves.
+
+---
+
 # 📌 Project Status
 
 | Component | Status |
 |---|:---:|
+| AeroLink Concept | 🟢 Defined |
+| Ground Node Prototype | 🟢 Developed |
+| V0.0 Firmware | 🟢 Available |
+| V1.1 Firmware | 🟢 Available |
+| Ground Mesh Architecture | 🟢 Defined |
 | ESP32 Ground Node | 🟢 Prototype |
-| Mesh Communication | 🟢 Implemented |
-| SOS Communication | 🟢 Implemented |
-| Node Identification | 🟢 Implemented |
-| Web Dashboard | 🟢 Prototype |
-| WebSocket Updates | 🟢 Implemented |
-| Node Location Metadata | 🟢 Implemented |
-| RSSI Monitoring | 🟢 Implemented |
-| Real GPS Integration | 🔵 Planned |
-| Interactive Map | 🔵 Planned |
-| Advanced Network Monitoring | 🔵 Planned |
-| Secure Communication | 🔵 Planned |
-| ESP-NOW Custom Mesh | 🔵 Future Development |
-| UAV Integration | 🔵 Development |
-| Parachute Deployment | 🔵 Development |
-| Complete UAV + Ground Mesh System | 🔵 Future |
-
----
+| SOS Communication | 🟢 Prototype |
+| UAV Architecture | 🟡 Development |
+| GPS-Based Deployment | 🟡 Development |
+| Controlled Deployment Deployment | 🟡 Development |
+| Low-CG Protective Enclosure | 🟡 Development |
+| LoRa Communication | 🟡 Development |
+| SOS Push Button | 🟡 Development |
+| React Dashboard | 🟡 Development |
+| Node.js + Express Backend | 🟡 Development |
+| Firebase Integration | 🟡 Development |
+| OpenStreetMap Integration | 🟡 Development |
+| WebSocket Monitoring | 🟡 Development |
+| Multi-UAV Deployment | 🔵 Future |
+| Advanced Network Monitoring | 🔵 Future |
+| Full Integrated Field System | 🔵 Future |
 
 # 🏆 Project Vision
 
