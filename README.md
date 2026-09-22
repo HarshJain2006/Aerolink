@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🚁 AeroLink — Emergency Mesh Network
 
 > **A UAV-deployable emergency communication network designed to rapidly restore communication connectivity in disaster-affected areas using strategically deployed ground communication nodes and a multi-hop mesh network.**
@@ -1414,7 +1413,7 @@ AeroLink is currently a prototype/research project developed for Smart India Hac
 The system should not be considered a certified life-safety communication system.
 
 Real-world deployment would require extensive testing, validation, safety assessment, communication reliability testing, UAV flight testing, mechanical testing, cybersecurity evaluation, regulatory compliance, and field trials.
-=======
+---
 # AeroLink Command
 
 Build AeroLink — a Ground Control Station (GCS) dashboard for a disaster-response system (SIH 2026, PS ID 26223). Real system context, for accuracy — do not invent features beyond this:
@@ -1509,4 +1508,3 @@ cd <repository-name>
 npm i
 npm run dev
 ```
->>>>>>> source/main
